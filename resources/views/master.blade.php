@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="css/buttons.dataTables.min.css">
     <link rel="stylesheet" href="css/print.min.css">
     <link rel="stylesheet" href="css/pace-theme-default.min.css">
+    <link rel="stylesheet" href="css/style-additional.css">
 
     @yield('css')
 

@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\CashierController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\KonversiPluController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\UploadPotController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,6 +27,14 @@ Route::middleware(['mylogin'])->group(function () {
     //HOME
     Route::group(['prefix' => 'home'], function(){
 
-        Route::get('/', [HomeController::class, 'index']);
+        Route::get('/', [KonversiPluController::class, 'index']);
+        Route::get('/datatables', [KonversiPluController::class, 'datatables']);
+        Route::get('/igr-datatables', [KonversiPluController::class, 'helpIgr']);
     });
+
+    Route::group(['prefix' => 'upload-pot'], function(){
+        Route::get('/', [UploadPotController::class, 'index']);
+
+    });
+
 });

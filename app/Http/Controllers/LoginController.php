@@ -15,6 +15,7 @@ class LoginController extends Controller
 
     public function login(Request $req)
     {
+        dd($req);
         try {
             $mytime = date('Ymd H:i:s');
             DatabaseConnection::setConnection($req->branch, "PRODUCTION");

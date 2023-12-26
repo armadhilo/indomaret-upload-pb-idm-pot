@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Helper\ApiFormatter;
 use App\Helper\DatabaseConnection;
 use App\Http\Requests\DetailKasirRequest;
+use App\Http\Requests\KonversiPluSaveRequest;
 use App\Http\Requests\TableRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -22,112 +24,98 @@ class KonversiPluController extends Controller
     }
 
     public function detail($plu){
-        // sb.AppendLine("SELECT PRD_DeskripsiPanjang ")
-        // sb.AppendLine("  FROM tbMaster_Prodmast ")
-        // sb.AppendLine(" WHERE PRD_PRDCD = '" & txtPluIGR.Text & "'  ")
+        $data = DB::table("tbmaster_prodmast")
+            ->select("prd_deskripsipanjang")
+            ->where("prd_prdcd", $plu)
+            ->first();
 
+        if(empty($data)){
+            return ApiFormatter::error(400, 'Data tidak ditemukan');
+        }
+
+        $message = 'Data detail berhasil ditampilkan';
+        return ApiFormatter::success(200,$message, $data);
     }
 
     public function datatables(){
-        // sb.AppendLine("SELECT KAT_PLUIDM, ")
-        // sb.AppendLine("       KAT_PLUIGR, ")
-        // sb.AppendLine("       KAT_DESKRIPSI, ")
-        // sb.AppendLine("       KAT_FLAGAKTIF ")
-        // sb.AppendLine("  FROM KONVERSI_ATK ")
-        // sb.AppendLine(" ORDER BY KAT_PLUIDM ")
+        $data = DB::table("konversi_atk")
+            ->select("kat_pluidm", "kat_pluigr", "kat_deskripsi", "kat_flagaktif")
+            ->orderBy("kat_pluidm")
+            ->get();
 
+        return DataTables::of($data)
+                    ->addIndexColumn()
+                    ->make(true);
     }
 
-    public function actionSave(){
+    public function actionSave(KonversiPluSaveRequest $request){
         //! CEK DI TABLE KONVERSI ATK UNTUK PLU DAN IGR YANG DI PILIH APAKAH SUDAH ADA
         //! CEK SUDAH ADA BELUM PLUNYA
-        // sb.AppendLine("SELECT coalesce(Count(0),0) ")
-        // sb.AppendLine("  FROM KONVERSI_ATK ")
-        // sb.AppendLine(" WHERE KAT_PLUIDM = '" & txtPluIDM.Text & "' ")
-        // sb.AppendLine("   AND KAT_PLUIGR = '" & txtPluIGR.Text & "' ")
 
-        if(jum > 0){
+        $data = DB::table('konversi_atk')
+            ->where([
+                'kat_pluidm' => $request->kat_pluidm,
+                'kat_pluigr' => $request->kat_pluigr,
+            ])->count();
+
+        if($data > 0){
+
             //! CEK SUDAH ADA YG AKTIF??
-            // sb.AppendLine("Select coalesce(Count(0),0) ")
-            // sb.AppendLine("  FROM KONVERSI_ATK ")
-            // sb.AppendLine(" WHERE KAT_PLUIDM = '" & txtPluIDM.Text & "' ")
-            // sb.AppendLine("   AND KAT_FLAGAKTIF > 0 ")
-            // sb.AppendLine("   AND KAT_PLUIGR <> '" & txtPluIGR.Text & "' ")
+            $data = DB::table('konversi_atk')
+            ->where([
+                'kat_pluidm' => $request->kat_pluidm,
+            ])
+            ->where('kat_pluigr', '!=', $request->kat_pluigr)
+            ->where('kat_flagaktif','>',0)
+            ->count();
 
-            if(jum > 0){
-                //* ERROR MESSAGE -> PLU IDM : " & txtPluIDM.Text & " Sudah Mempunyai PLU IGR Yang Aktif !
-                return;
+            if($data > 0){
+                $message = "PLU IDM : " . $request->kat_pluidm . " Sudah Mempunyai PLU IGR Yang Aktif !";
+                return ApiFormatter::error(400, $message);
+
             }else{
+
                 //! UPDATE KONVERSI_ATK
-                // sb.AppendLine("UPDATE KONVERSI_ATK ")
-                // sb.AppendLine("SET KAT_DESKRIPSI = '" & Replace(txtDeskripsi.Text, "'", "''") & "', ")
-                // sb.AppendLine("KAT_FLAGAKTIF = '" & IIf(chkAktif.Checked, 1, 0) & "', ")
-                // sb.AppendLine("KAT_MODIFY_BY = '" & UserID & "', ")
-                // sb.AppendLine("KAT_MODIFY_DT = CURRENT_TIMESTAMP ")
-                // sb.AppendLine("WHERE KAT_PLUIDM = '" & txtPluIDM.Text & "' ")
-                // sb.AppendLine("AND KAT_PLUIGR = '" & txtPluIGR.Text & "' ")
+                DB::table('konversi_atk')
+                    ->where('kat_pluidm', '=', $request->kat_pluigr)
+                    ->where('kat_pluigr', '=', $request->kat_pluidm)
+                    ->update([
+                        'kat_deskripsi' => $request->description,
+                        'kat_flagaktif' => $request->flag_aktif == 1 ? 1 : 0,
+                        'kat_modify_by' => session('userid'),
+                        'kat_modify_dt' => now(), // Assuming you want to set the modification date to the current timestamp
+                    ]);
 
-                // sb.AppendLine("INSERT INTO KONVERSI_ATK ")
-                // sb.AppendLine("( ")
-                // sb.AppendLine("  KAT_PLUIDM, ")
-                // sb.AppendLine("  KAT_PLUIGR, ")
-                // sb.AppendLine("  KAT_DESKRIPSI, ")
-                // sb.AppendLine("  KAT_FLAGAKTIF, ")
-                // sb.AppendLine("  KAT_Create_By, ")
-                // sb.AppendLine("  KAT_Create_Dt ")
-                // sb.AppendLine(") ")
-                // sb.AppendLine("VALUES ")
-                // sb.AppendLine("( ")
-                // sb.AppendLine("  '" & txtPluIDM.Text & "', ")
-                // sb.AppendLine("  '" & txtPluIGR.Text & "', ")
-                // sb.AppendLine("  '" & Replace(txtDeskripsi.Text, "'", "''") & "', ")
-                // sb.AppendLine("  '" & IIf(chkAktif.Checked, 1, 0) & "', ")
-                // sb.AppendLine("  '" & UserID & "', ")
-                // sb.AppendLine("  CURRENT_TIMESTAMP ")
-                // sb.AppendLine(") ")
-
-                // return //* MESSAGE SUCCESS -> Data Berhasil Diupdate !!
-                //REFRESH DATATABLES
+                $message = 'Data Berhasil Diupdate !!';
+                return ApiFormatter::success(200, $message);
             }
 
+            //! CREATE KONVERSI_ATK
+            DB::table('konversi_atk')->insert([
+                'kat_pluidm' => $request->kat_pluigr,
+                'kat_pluigr' => $request->kat_pluidm,
+                'kat_deskripsi' => $request->description,
+                'kat_flagaktif' => $request->flag_aktif == 1 ? 1 : 0,
+                'kat_create_by' => session('userid'),
+                'kat_create_dt' => now(), // Assuming you want to set the creation date to the current timestamp
+            ]);
+
+            $message = 'Data Berhasil disimpan !!';
+            return ApiFormatter::success(200, $message);
         }
-
-        //! INSERT KONVERSI_ATK
-        // sb.AppendLine("INSERT INTO KONVERSI_ATK ")
-        // sb.AppendLine("( ")
-        // sb.AppendLine("  KAT_PLUIDM, ")
-        // sb.AppendLine("  KAT_PLUIGR, ")
-        // sb.AppendLine("  KAT_DESKRIPSI, ")
-        // sb.AppendLine("  KAT_FLAGAKTIF, ")
-        // sb.AppendLine("  KAT_Create_By, ")
-        // sb.AppendLine("  KAT_Create_Dt ")
-        // sb.AppendLine(") ")
-        // sb.AppendLine("VALUES ")
-        // sb.AppendLine("( ")
-        // sb.AppendLine("  '" & txtPluIDM.Text & "', ")
-        // sb.AppendLine("  '" & txtPluIGR.Text & "', ")
-        // sb.AppendLine("  '" & Replace(txtDeskripsi.Text, "'", "''") & "', ")
-        // sb.AppendLine("  '" & IIf(chkAktif.Checked, 1, 0) & "', ")
-        // sb.AppendLine("  '" & UserID & "', ")
-        // sb.AppendLine("  CURRENT_TIMESTAMP ")
-        // sb.AppendLine(") ")
-
-        // return //* MESSAGE SUCCESS -> Data Berhasil Disimpan !!
-        //REFRESH DATATABLES
     }
 
-    //! =======ANOTHER FUNCTION=========//!
+    //* =======ANOTHER FUNCTION=========
 
     //! di double click akan menmpel plu igr dan deskripsi
     public function helpIgr(){
-        // sb.AppendLine("SELECT PRD_PRDCD as PLUIGR,PRD_DeskripsiPanjang as DESK ")
-        // sb.AppendLine("  FROM tbMaster_Prodmast ")
-        // sb.AppendLine(" WHERE PRD_PRDCD LIKE '%0' ")
-        // If RadioPLUIGR.Checked Then
-        // sb.AppendLine("   AND PRD_PRDCD LIKE '%" & txtPLUIGR.Text & "%' ")
-        // ElseIf RadioDeskripsi.Checked Then
-        // sb.AppendLine("   AND PRD_DeskripsiPanjang LIKE '%" & txtDeskripsi.Text & "%' ")
-        // End If
-        // sb.AppendLine(" ORDER BY PRD_DeskripsiPanjang ")
+        $data = DB::table("tbmaster_prodmast")
+            ->selectRaw("prd_prdcd as pluigr, prd_deskripsipanjang as desk")
+            ->orderBy("prd_deskripsipanjang")
+            ->get();
+
+        return DataTables::of($data)
+                    ->addIndexColumn()
+                    ->make(true);
     }
 }

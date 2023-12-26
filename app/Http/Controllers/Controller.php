@@ -2,20 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Helper\ApiFormatter;
+use Carbon\Carbon;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Validation\ValidatesRequests;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\DB;
 
 class Controller extends BaseController
 {
     use AuthorizesRequests, ValidatesRequests;
 
-    public function RefreshGridHeader(){
-        #DELETE TEMP_CSV_PB_POT
+    public function RefreshGridHeader($ip){
+        //! DELETE TEMP_CSV_PB_POT
         // sb.AppendLine("DELETE FROM TEMP_CSV_PB_POT ")
         // sb.AppendLine(" WHERE IP = '" & IP & "' ")
 
-        #INSERT INTO TEMP_CSV_PB_POT
+        DB::table('TEMP_CSV_PB_POT')
+            ->where('ip', $ip)
+            ->delete();
+
+        //! INSERT INTO TEMP_CSV_PB_POT
         // sb.AppendLine("INSERT INTO TEMP_CSV_PB_POT ")
         // sb.AppendLine("( ")
         // sb.AppendLine("       NOPB, ")
@@ -40,7 +48,33 @@ class Controller extends BaseController
         // sb.AppendLine("   And CPP_FLAG IS NULL ")
         // sb.AppendLine("   And CPP_IP = '" & IP & "' ")
 
-        #ISI DATAGRID HEADER PB IDM
+        DB::select("
+            INSERT INTO TEMP_CSV_PB_POT
+            (
+                NOPB,
+                TGLPB,
+                TOKO,
+                PLUIGR,
+                QTY,
+                NAMA_FILE,
+                STOCK,
+                IP
+            )
+            Select CPP_NOPB as NOPB,
+                TO_CHAR(CPP_TglPB,'DD-MM-YYYY') as TGLPB,
+                CPP_KodeToko as TOKO,
+                CPP_PLUIGR as PLUIGR,
+                CPP_Qty as QTY,
+                CPP_FileName,
+                CPP_Stock,
+                CPP_IP
+            From CSV_PB_POT
+            Where CPP_TGLPROSES >= CURRENT_DATE - 7
+            And CPP_FLAG IS NULL
+            And CPP_IP = '" . $ip . "'
+        ");
+
+        //! ISI DATAGRID HEADER PB IDM
         // sb.AppendLine("WITH A  ")
         // sb.AppendLine("AS  ")
         // sb.AppendLine("(  ")
@@ -72,22 +106,70 @@ class Controller extends BaseController
         // sb.AppendLine("          NAMA_FILE  ")
         // sb.AppendLine("    ORDER BY TOKO ")
 
-
+        DB::select("
+            WITH A
+            AS
+            (
+                Select NOPB,
+                    TGLPB,
+                    TOKO,
+                    coalesce(COUNT(PLUIGR),0) as ITEM,
+                    ROUND(sum(coalesce(QTY::numeric,0) / CASE WHEN PRD_UNIT = 'KG' THEN PRD_FRAC ELSE 1 end * coalesce(ST_AVGCOST::numeric,0)),2) as RUPIAH,
+                    NAMA_FILE
+                From TEMP_CSV_PB_POT,
+                    tbMaster_Stock,
+                    tbMaster_Prodmast
+                Where ST_PRDCD = PLUIGR
+                And IP = '" . $ip . "'
+                And ST_LOKASI = '01'
+                AND PRD_PRDCD = ST_PRDCD
+                AND PRD_PRDCD = PLUIGR
+                Group By NOPB,TGLPB,TOKO,NAMA_FILE
+            )
+            SELECT NOPB,
+                TGLPB,
+                TOKO,
+                Replace(REPLACE(TO_CHAR(Sum(ITEM),'999G999G999G999'),',','.'),' ','') AS ITEM,
+                Replace(REPLACE(TO_CHAR(Sum(RUPIAH),'999G999G999G999'),',','.'),' ','') AS RUPIAH,
+                NAMA_FILE
+            FROM A
+            GROUP BY NOPB,
+                TGLPB,
+                TOKO,
+                NAMA_FILE
+            ORDER BY TOKO
+        ");
     }
 
-    public function DeleteCSVPOT($kodetoko){
+    public function DeleteCSVPOT($ip,$kodeToko){
+
         // sb.AppendLine("DELETE FROM CSV_PB_POT ")
         // sb.AppendLine(" Where CPP_IP = '" & IP & "' ")
         // sb.AppendLine("   AND CPP_KodeToko = '" & kdToko & "' ")
         // sb.AppendLine("   AND CPP_TglProses = CURRENT_DATE ")
+
+        DB::table('CSV_PB_POT')
+            ->where([
+                'CPP_IP' => $ip,
+                'CPP_KodeToko' => $kodeToko
+            ])
+            ->whereRaw("CPP_TglProses = CURRENT_DATE")
+            ->delete();
     }
 
-    public function ProsesKonvensi($kdToko, $noPB){
+    public function ProsesKonvensi($ip, $kodeToko, $noPB){
 
-        #DELETE DATA STOCK_EKONOMIS_POT
+        //! DELETE DATA STOCK_EKONOMIS_POT
         //DELETE FROM STOCK_EKONOMIS_POT WHERE SEP_TOKO = '" & kdToko & "' AND SEP_NOPB = '" & noPB & "' "
 
-        #INSERT INTO STOCK_EKONOMIS_POT
+        DB::table('STOCK_EKONOMIS_POT')
+            ->where([
+                'SEP_TOKO' => $kodeToko,
+                'SEP_NOPB' => $noPB,
+            ])
+            ->delete();
+
+        //! INSERT INTO STOCK_EKONOMIS_POT
         // sb.AppendLine("INSERT INTO STOCK_EKONOMIS_POT ( ")
         // sb.AppendLine("	SEP_TOKO, ")
         // sb.AppendLine("	SEP_NOPB, ")
@@ -145,10 +227,70 @@ class Controller extends BaseController
         // sb.AppendLine("   AND lks_jenisrak NOT LIKE 'S%'  ")
         // sb.AppendLine(" GROUP BY toko, nopb, tglpb, pluidm, pluigr, st_saldoakhir, qty, qty_akumulasi, req_id  ")
 
-        # RUN PROCEDURE KONVERSI_POT
-        // CALL KONVERSI_POT ('" & kdToko.Trim & "', '" & noPB.Trim & "', '" & IP.Trim & "', '')
+        DB::select("
+            INSERT INTO STOCK_EKONOMIS_POT (
+                SEP_TOKO,
+                SEP_NOPB,
+                SEP_TGLPB,
+                SEP_PLUIDM,
+                SEP_PLUIGR,
+                SEP_LPP,
+                SEP_PLANO,
+                SEP_QTYORDER,
+                SEP_AKUMULASI,
+                SEP_QTYEKONOMIS,
+                SEP_CREATE_BY,
+                SEP_CREATE_DT,
+                SEP_IP
+            )
+            SELECT toko,
+                nopb,
+                tglpb,
+                pluidm,
+                pluigr,
+                COALESCE(st_saldoakhir, 0) AS qty_lpp,
+                SUM(COALESCE(lks_qty, 0)) AS qty_plano,
+                qty AS qty_order,
+                COALESCE(qty_akumulasi, 0) AS qty_akumulasi,
+                COALESCE(st_saldoakhir,0) -
+                ABS(COALESCE(qty_akumulasi, 0)) AS qty_ekonomis,
+                '" . session('userid') . "',
+                CURRENT_TIMESTAMP,
+                req_id
+            FROM (
+                    SELECT cpp_kodetoko AS toko,
+                            cpp_nopb AS nopb,
+                            DATE_TRUNC('day',cpp_tglpb) AS tglpb,
+                            cpp_pluidm AS pluidm,
+                            kat_pluigr AS pluigr,
+                            cpp_qty AS qty,
+                            COALESCE(sap_akumulasi,0) AS qty_akumulasi,
+                            cpp_ip AS req_id
+                        FROM csv_pb_pot
+                        JOIN konversi_atk
+                        ON cpp_pluidm = kat_pluidm
+                        LEFT JOIN stock_akumulasipb_pot
+                        ON kat_pluigr = sap_prdcd
+                        WHERE cpp_kodetoko = '" . $kodeToko . "'
+                        AND cpp_nopb = '" . $noPB . "'
+                        AND cpp_ip = '" . $ip . "'
+                        AND DATE_TRUNC('day',cpp_tglproses) = DATE_TRUNC('day',CURRENT_DATE)
+            ) as pb_pot
+            JOIN tbmaster_stock
+            ON st_prdcd = pluigr
+            AND st_lokasi = '01'
+            LEFT JOIN	tbmaster_lokasi
+            ON lks_prdcd = pluigr
+            AND NOT REGEXP_LIKE(lks_koderak,'^D|^G')
+            AND lks_jenisrak NOT LIKE 'S%'
+            GROUP BY toko, nopb, tglpb, pluidm, pluigr, st_saldoakhir, qty, qty_akumulasi, req_id
+        ");
 
-        #UPDATE STOCK_AKUMULASIPB_POT
+        //!  RUN PROCEDURE KONVERSI_POT
+        // CALL KONVERSI_POT ('" & kdToko.Trim & "', '" & noPB.Trim & "', '" & IP.Trim & "', '')
+        DB::select("CALL KONVERSI_POT('$kodeToko','$noPB','$ip')");
+
+        //! UPDATE STOCK_AKUMULASIPB_POT
         // sb.AppendLine("MERGE INTO stock_akumulasipb_pot t ")
         // sb.AppendLine("USING ( ")
         // sb.AppendLine("  SELECT DISTINCT cpp_pluigr, ")
@@ -177,11 +319,41 @@ class Controller extends BaseController
         // sb.AppendLine("	  s.cpp_qty, ")
         // sb.AppendLine("	  CURRENT_DATE ")
         // sb.AppendLine("  ) ")
+
+        DB::select("
+            MERGE INTO stock_akumulasipb_pot t
+            USING (
+            SELECT DISTINCT cpp_pluigr, cpp_qty
+            FROM csv_pb_pot
+            WHERE cpp_kodetoko = '" . $kodeToko . "'
+                AND cpp_nopb = '" . $noPB . "'
+                AND cpp_ip = '" . $ip . "'
+                AND cpp_pluigr IS NOT NULL
+                AND cpp_tglproses = CURRENT_DATE
+                AND COALESCE(cpp_tolakan_sep,0) = 0
+            ) s
+            ON (
+            t.sap_prdcd = s.cpp_pluigr
+            )
+            WHEN MATCHED THEN
+            UPDATE SET sap_akumulasi = sap_akumulasi + s.cpp_qty,
+                        sap_tglupd = CURRENT_DATE
+            WHEN NOT MATCHED THEN
+            INSERT (
+                sap_prdcd,
+                sap_akumulasi,
+                sap_tglupd
+            ) VALUES (
+                s.cpp_pluigr,
+                s.cpp_qty,
+                CURRENT_DATE
+            )
+        ");
     }
 
-    public function KurangiAkumulasiPB($kdToko, $noPB){
+    public function KurangiAkumulasiPB($ip, $kodeToko, $noPB){
 
-        #ROLLBACK STOCK_AKUMULASIPB
+        //! ROLLBACK STOCK_AKUMULASIPB
         // sb.AppendLine("MERGE INTO stock_akumulasipb_pot t ")
         // sb.AppendLine("USING ( ")
         // sb.AppendLine("  SELECT DISTINCT cpp_pluigr, ")
@@ -199,31 +371,52 @@ class Controller extends BaseController
         // sb.AppendLine("WHEN MATCHED THEN ")
         // sb.AppendLine("  UPDATE SET sap_akumulasi = sap_akumulasi - s.cpp_qty, ")
         // sb.AppendLine("             sap_tglupd = CURRENT_DATE ")
+
+        DB::select("
+            MERGE INTO stock_akumulasipb_pot t
+            USING (
+            SELECT DISTINCT cpp_pluigr, cpp_qty
+            FROM csv_pb_pot
+            WHERE cpp_kodetoko = '" & $kodeToko & "'
+                AND cpp_nopb = '" & $noPB & "'
+                AND cpp_ip = '" & $ip & "'
+                AND cpp_pluigr IS NOT NULL
+                AND COALESCE(cpp_tolakan_sep,0) = 0
+            ) s
+            ON (
+            t.sap_prdcd = s.cpp_pluigr
+            )
+            WHEN MATCHED THEN
+            UPDATE SET sap_akumulasi = sap_akumulasi - s.cpp_qty,
+                sap_tglupd = CURRENT_DATE
+        ");
     }
 
-    public function getKodeDC($kodetoko){
-        #GET KODE DC
+    public function getKodeDC($kodeToko){
+        //! GET KODE DC
         //("SELECT msi_kodedc FROM master_supply_idm WHERE msi_kodetoko = '" & kodetoko & "'"
+
+        return DB::table('master_supply_idm')->where('msi_kodetoko', $kodeToko)->first()->msi_kodedc;
     }
 
     public function getIP(){
-        //cari get IP dengan PHP
+        return $_SERVER['REMOTE_ADDR'];
     }
 
     public function CetakAll_1(){
 
-        #GET HEADER CETAKAN
+        //! GET HEADER CETAKAN
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
 
-        #GET HEADER CETAKAN
+        //! GET HEADER CETAKAN
         // sb.AppendLine("Select TKO_NamaOMI ")
         // sb.AppendLine("  From tbMaster_TokoIGR ")
         // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) >
 
-        #CHECK DATA
+        //! CHECK DATA
         // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
         // sb.AppendLine("  From information_schema.columns ")
         // sb.AppendLine(" Where UPPER(table_name) = 'TBMASTER_MARGINPLUIDM' ")
@@ -355,18 +548,18 @@ class Controller extends BaseController
     }
 
     public function CetakAll_2(){
-        #GET HEADER CETAKAN
+        //! GET HEADER CETAKAN
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
 
-        #GET HEADER CETAKAN
+        //! GET HEADER CETAKAN
         // sb.AppendLine("Select TKO_NamaOMI ")
         // sb.AppendLine("  From tbMaster_TokoIGR ")
         // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        #CHECK DATA
+        //! CHECK DATA
         // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
         // sb.AppendLine("  From information_schema.columns ")
         // sb.AppendLine(" Where UPPER(table_name) = 'TBMASTER_MARGINPLUIDM' ")
@@ -769,10 +962,14 @@ class Controller extends BaseController
 
     }
 
-    public function prosesPBIDM(){
+    public function prosesPBIDM($ip, $kodeToko, $noPB, $tglPB, $KodeMember, $chkIDMBacaProdcrm, $kodeDCIDM){
 
-        #DEL TEMP_CETAKPB_TOLAKAN_IDM
+        //! DEL TEMP_CETAKPB_TOLAKAN_IDM
         // DELETE FROM TEMP_CETAKPB_TOLAKAN_IDM WHERE req_id = '" & IP & "' "
+
+        DB::table('TEMP_CETAKPB_TOLAKAN_IDM')
+            ->where('req_id', $ip)
+            ->delete();
 
         // sb.AppendLine("Select TKO_KodeCustomer ")
         // sb.AppendLine("  From tbMaster_tokoIGR ")
@@ -780,25 +977,55 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And COALESCE(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
+        $data = DB::table('tbMaster_tokoIGR')
+            ->where([
+                'TKO_KodeIGR' => session('KODECABANG'),
+                'TKO_KodeOMI' => $kodeToko
+            ])
+            ->whereRaw("COALESCE(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first();
+
         // if(empty){
         //     ("Kode Toko " & KodeToko & " Tidak Terdaftar Di TbMaster_TokoIGR
         // }
 
-        #GET -> KodeSBU
+        if(empty($data)){
+            $message = "Kode Toko $kodeToko Tidak Terdaftar Di TbMaster_TokoIGR";
+            throw new HttpResponseException(ApiFormatter::error(400, $message));
+        }
+
+        //! GET -> KodeSBU
         // sb.AppendLine("Select TKO_KodeSBU ")
         // sb.AppendLine("  From tbMaster_tokoIGR ")
         // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And COALESCE(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        #GET -> PersenMargin
+        $KodeSBU = DB::table('tbMaster_tokoIGR')
+            ->where([
+                'TKO_KodeIGR' => session('KODECABANG'),
+                'TKO_KodeOMI' => $kodeToko
+            ])
+            ->whereRaw("COALESCE(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->TKO_KodeSBU;
+
+        //! GET -> PersenMargin
         // sb.AppendLine("Select coalesce(tko_persenmargin::numeric,3) / 100 ")
         // sb.AppendLine("  From tbMaster_TokoIGR ")
         // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And COALESCE(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        #GET -> jum
+        $PersenMargin = DB::table('tbMaster_TokoIGR')
+            ->selectRaw("coalesce(tko_persenmargin::numeric,3) / 100 as tko_persenmargin")
+            ->where([
+                'TKO_KodeIGR' => session('KODECABANG'),
+                'TKO_KodeOMI' => $kodeToko
+            ])
+            ->whereRaw("COALESCE(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_persenmargin;
+
+        //! GET -> jum
         // sb.AppendLine("Select COALESCE(count(1),0) ")
         // sb.AppendLine("  From TBTR_HEADER_POT ")
         // sb.AppendLine(" Where HDP_KodeIGR='" & KDIGR & "' ")
@@ -806,14 +1033,30 @@ class Controller extends BaseController
         // sb.AppendLine("   AND HDP_NoPB = '" & noPB & "' ")
         // sb.AppendLine("    AND to_char(HDP_TGLPB,'YYYY') = '" & Strings.Right(tglPB, 4) & "' ")
 
+        $data = DB::table('TBTR_HEADER_POT')
+                ->where([
+                    'HDP_KodeIGR' => session('KODECABANG'),
+                    'HDP_KodeToko' => $kodeToko,
+                    'HDP_NoPB' => $noPB,
+                ])
+                ->whereYear('HDP_TGLPB', Carbon::parse($tglPB)->format('Y'))
+                ->count();
+
         // if(jum > 0){
         //     PB Dengan No = " & noPB & ", KodeTOKO = " & KodeToko & " Sudah Pernah Diproses !
         // }
 
-        #GET -> kodeDCIDM
+        if($data > 0){
+            $message = "PB Dengan No = $noPB, KodeTOKO = $kodeToko Sudah Pernah Diproses !";
+            throw new HttpResponseException(ApiFormatter::error(400, $message));
+        }
+
+        //! GET -> kodeDCIDM
         // $this->getKodeDC(KodeToko)
 
-        #ISI PLU TIDAK TERDAFTAR DI PLU TIDAK TERDAFTAR DI TBTEMP_PLUIDM
+        $this->getKodeDC($kodeToko);
+
+        //! ISI PLU TIDAK TERDAFTAR DI PLU TIDAK TERDAFTAR DI TBTEMP_PLUIDM
         // sb.AppendLine("INSERT Into TEMP_CETAKPB_TOLAKAN_IDM ")
         // sb.AppendLine("( ")
         // sb.AppendLine("   KOMI, ")
@@ -878,7 +1121,71 @@ class Controller extends BaseController
         // sb.AppendLine("   AND CPP_NoPB = '" & noPB & "'")
         // sb.AppendLine("   AND CPP_TglPB = to_date('" & tglPB & "','DD-MM-YYYY') ")
 
-        #PLU IDM TIDAK MEMPUNYAI PLU INDOGROSIR
+        $data = DB::table('csv_pb_pot')
+            ->selectRaw("
+                cpp_nopb,
+                cpp_tglpb,
+                cpp_pluidm,
+                cpp_qty,
+                cpp_KodeToko,
+            ")
+            ->where([
+                'CPP_IP' => $ip,
+                'CPP_KodeToko' => $kodeToko,
+                'CPP_NoPB' => $noPB,
+            ])
+            ->whereRaw("CPP_TglPB = to_date('" . $tglPB . "','DD-MM-YYYY')");
+
+            if($chkIDMBacaProdcrm){
+                $data = $data->whereNotExists(DB::raw("
+                    Select KAT_PluIGR
+                    From KONVERSI_ATK
+                    WHERE KAT_PLUIDM = CPP_PLUIDM
+                    AND EXISTS (
+                        SELECT st_prdcd
+                        FROM tbmaster_stock
+                        WHERE st_prdcd = kat_pluigr
+                        AND st_lokasi = '01'
+                    )
+                "));
+            }else{
+
+                $subquery = "
+                    SELECT IDM_PLUIDM
+                    FROM TBTEMP_PLUIDM
+                    WHERE IDM_PLUIDM = cpp_pluidm
+                ";
+
+                if($kodeDCIDM <> ""){
+                    $subquery .= "AND IDM_KDIDM = '" & $kodeDCIDM & "'";
+                }
+
+                $data = $data->whereNotExists(DB::raw($subquery));
+            }
+
+        $data = $data->get();
+
+        foreach($data as $item){
+            DB::table('TEMP_CETAKPB_TOLAKAN_IDM')
+                ->insert([
+                    'KOMI' => $KodeMember,
+                    'TGL' => Carbon::now(),
+                    'NODOK' => $item->cpp_nopb,
+                    'TGLDOK' => $item->cpp_tglpb,
+                    'PLU' => $item->cpp_pluidm,
+                    'PLUIGR' => null,
+                    'KETA' => $chkIDMBacaProdcrm ? 'PLU TIDAK TERDAFTAR DI TBMASTER_PRODCRM' : 'PLU TIDAK TERDAFTAR DI TBTEMP_PLUIDM',
+                    'TAG' => null,
+                    'DESCR' => null,
+                    'QTYO' => $item->cpp_qty,
+                    'GROSS' => null,
+                    'KCAB' => $item->cppKodeToko,
+                    'KODEIGR' => session('KODECABANG'),
+                    'REQ_ID' => $ip,
+                ]);
+        }
+
+        //! PLU IDM TIDAK MEMPUNYAI PLU INDOGROSIR
         // sb.AppendLine("INSERT Into TEMP_CETAKPB_TOLAKAN_IDM ")
         // sb.AppendLine("( ")
         // sb.AppendLine("   KOMI, ")
@@ -933,7 +1240,67 @@ class Controller extends BaseController
         // sb.AppendLine("   AND CPP_NoPB = '" & noPB & "'")
         // sb.AppendLine("   AND CPP_TglPB = to_date('" & tglPB & "','DD-MM-YYYY') ")
 
-        #==================
+        $data = DB::table('csv_pb_pot')
+            ->selectRaw("
+                CPP_NoPB,
+                CPP_TglPB,
+                CPP_PLUIDM,
+                CPP_Qty,
+                CPP_KodeToko,
+            ")
+            ->where([
+                'CPP_IP' => $ip,
+                'CPP_KodeToko' => $kodeToko,
+                'CPP_NoPB' => $noPB,
+            ])
+            ->whereRaw("CPP_TglPB = to_date('" . $tglPB . "','DD-MM-YYYY')");
+
+            if($chkIDMBacaProdcrm){
+                $data = $data->whereNotExists(DB::raw("
+                    Select KAT_PluIGR
+                    From KONVERSI_ATK
+                    WHERE KAT_PLUIDM = CPP_PLUIDM
+                    AND KAT_PLUIGR IS NULL
+                "));
+            }else{
+
+                $subquery = "
+                    SELECT IDM_PLUIDM
+                    FROM TBTEMP_PLUIDM
+                    WHERE IDM_PLUIDM = cpp_pluidm
+                    AND IDM_PLUIGR IS NULL
+                ";
+
+                if($kodeDCIDM <> ""){
+                    $subquery .= "AND IDM_KDIDM = '" & $kodeDCIDM & "'";
+                }
+
+                $data = $data->whereNotExists(DB::raw($subquery));
+            }
+
+        $data = $data->get();
+
+        foreach($data as $item){
+            DB::table('TEMP_CETAKPB_TOLAKAN_IDM')
+                ->insert([
+                    'KOMI' => $KodeMember,
+                    'TGL' => Carbon::now(),
+                    'NODOK' => $item->cpp_nopb,
+                    'TGLDOK' => $item->cpp_tglpb,
+                    'PLU' => $item->cpp_pluidm,
+                    'PLUIGR' => null,
+                    'KETA' => 'PLU IDM TIDAK MEMPUNYAI PLU INDOGROSIR',
+                    'TAG' => null,
+                    'DESCR' => null,
+                    'QTYO' => $item->cpp_qty,
+                    'GROSS' => null,
+                    'KCAB' => $item->cppKodeToko,
+                    'KODEIGR' => session('KODECABANG'),
+                    'REQ_ID' => $ip,
+                ]);
+        }
+
+        //! ==================
         // sb.AppendLine("INSERT Into TEMP_CETAKPB_TOLAKAN_IDM ")
         // sb.AppendLine("( ")
         // sb.AppendLine("   KOMI, ")
@@ -1027,10 +1394,10 @@ class Controller extends BaseController
 
         //     ExecQRY(sb.ToString, "PLU IGR PADA TBTEMP_PLUIDM TIDAK ADA DI PRODMAST")
         // End If
-        #===================
+        //! ===================
 
 
-        #AVG.COST <= 0 - 1
+        //! AVG.COST <= 0 - 1
         // sb.AppendLine("INSERT Into TEMP_CETAKPB_TOLAKAN_IDM ")
         // sb.AppendLine("( ")
         // sb.AppendLine("   KOMI, ")
@@ -1127,7 +1494,7 @@ class Controller extends BaseController
         // End If
 
 
-        #AVG.COST <= 0 - 2
+        //! AVG.COST <= 0 - 2
         // sb.AppendLine("INSERT Into TEMP_CETAKPB_TOLAKAN_IDM ")
         // sb.AppendLine("( ")
         // sb.AppendLine("   KOMI, ")
@@ -1236,7 +1603,7 @@ class Controller extends BaseController
         // End If
 
 
-        #STOCK EKONOMIS POT TIDAK MENCUKUPI
+        //! STOCK EKONOMIS POT TIDAK MENCUKUPI
         // sb.AppendLine("INSERT Into TEMP_CETAKPB_TOLAKAN_IDM ")
         // sb.AppendLine("( ")
         // sb.AppendLine("   KOMI, ")
@@ -1318,7 +1685,7 @@ class Controller extends BaseController
         //     End If
         // End If
 
-        #GET -> jum
+        //! GET -> jum
         // sb.AppendLine("Select COALESCE(COUNT(1),0)  ")
         // sb.AppendLine("  From information_schema.columns ")
         // sb.AppendLine(" Where upper(table_name) = 'TEMP_CETAKPB_TOLAKAN_IDM2' ")
@@ -1721,9 +2088,9 @@ class Controller extends BaseController
         // sb.AppendLine("		 AND IDM.PLU = IDM2.PLU ")
         // sb.AppendLine("   )    ")
 
-        #'------------------------------------'
-        #'+ 03-07-2013 ISI TEMP_PB_IDMREADY2 +'
-        #'------------------------------------'
+        //! '------------------------------------'
+        //! '+ 03-07-2013 ISI TEMP_PB_IDMREADY2 +'
+        //! '------------------------------------'
 
         //! DELETE FROM TEMP_PBIDM_READY2
         // sb.AppendLine("DELETE FROM TEMP_PBIDM_READY2 ")
@@ -1801,7 +2168,7 @@ class Controller extends BaseController
         // sb.AppendLine("  From information_schema.columns ")
         // sb.AppendLine(" Where upper(table_name) = 'TEMP_PBIDM_READY' ")
 
-        if(jum = 0){
+        // if(jum = 0){
             //! CREATE TABLE TEMP_PBIDM_READY
             // sb.AppendLine("CREATE TABLE TEMP_PBIDM_READY ")
             // sb.AppendLine("AS     ")
@@ -1870,7 +2237,7 @@ class Controller extends BaseController
             // sb.AppendLine("  And ST_Lokasi = '01'  ")
             // sb.AppendLine("  And COALESCE(ST_RecordID,'0') <> '1' ")
 
-        }else{
+        // }else{
             //! DELETE FROM TEMP_PBIDM_READY
             // sb.AppendLine("DELETE FROM TEMP_PBIDM_READY ")
             // sb.AppendLine(" WHERE REQ_ID = '" & IP & "' ")
@@ -1964,7 +2331,7 @@ class Controller extends BaseController
             // sb.AppendLine("Where ST_PRDCD = PLUKARTON  ")
             // sb.AppendLine("  And ST_Lokasi = '01'  ")
             // sb.AppendLine("  And COALESCE(ST_RecordID,'0') <> '1' ")
-        }
+        // }
 
         //! UPDATE TEMP_PBIDM_READY SUPAYA ITEM HANDHELD IN PIECES SEMUA
         // sb.AppendLine("UPDATE TEMP_PBIDM_READY ")
@@ -2007,7 +2374,7 @@ class Controller extends BaseController
         // sb.AppendLine(" Where COU_KodeOmi = '" & KodeToko & "' ")
         // sb.AppendLine("   And COU_KodeIGR = '" & KDIGR & "' ")
 
-        if(jum = 0){
+        // if(jum = 0){
             //! Insert Into tbtr_CounterPbOMI
             // sb.AppendLine("Insert Into tbtr_CounterPbOMI ")
             // sb.AppendLine("( ")
@@ -2030,14 +2397,14 @@ class Controller extends BaseController
 
             // If AdaKecil Then CounterKecil = 1
             // If AdaKartonan Then If AdaKecil Then CounterKarton = 2 Else CounterKarton = 1
-        }
+        // }
 
         // sb.AppendLine("Select COALESCE(length(rtrim(cou_nodokumen)),0) ")
         // sb.AppendLine("  From tbtr_counterpbomi ")
         // sb.AppendLine(" Where COU_KodeOmi = '" & KodeToko & "' ")
         // sb.AppendLine("   And COU_KodeIGR = '" & KDIGR & "' ")
 
-        if(jum >= 8){
+        // if(jum >= 8){
 
             //! SET COU_NoDokumen = ''
             // sb.AppendLine("UPDATE TbTr_CounterPBOMI ")
@@ -2054,7 +2421,7 @@ class Controller extends BaseController
             // If AdaKecil Then CounterKecil = 1
             // If AdaKartonan Then If AdaKecil Then CounterKarton = 2 Else CounterKarton = 1
 
-        }else{
+        // }else{
             //! SET COU_NoDokumen = RTRIM(COU_NoDokumen) + Y/YY
             // sb.AppendLine("UPDATE TbTr_CounterPBOMI ")
             // If AdaKartonan And AdaKecil Then
@@ -2069,7 +2436,7 @@ class Controller extends BaseController
 
             // If AdaKecil Then CounterKecil = jum + 1
             // If AdaKartonan Then CounterKarton = CounterKecil + 1
-        }
+        // }
 
         //! INSERT INTO TBTR_TOLAKANPBOMI
         // sb.AppendLine("INSERT INTO TBTR_TolakanPBOMI ")
@@ -2224,15 +2591,15 @@ class Controller extends BaseController
         // sb.AppendLine("   And a.tlko_NoPB = '" & noPB & "' ")
         // sb.AppendLine("   And a.tlko_TglPB = to_date('" & tglPB & "','DD-MM-YYYY') ")
 
-        #'-----------------------------------'
-        #'+ SIAPKAN DATA JALUR TIDAK KETEMU +'
-        #'-----------------------------------'
+        //! '-----------------------------------'
+        //! '+ SIAPKAN DATA JALUR TIDAK KETEMU +'
+        //! '-----------------------------------'
 
         // sb.AppendLine("Select COALESCE(COUNT(1),0)  ")
         // sb.AppendLine("  From information_schema.columns ")
         // sb.AppendLine(" Where upper(table_name) = 'TEMP_NOJALUR_IDM' ")
 
-        if(jum = 0){
+        // if(jum = 0){
             //! Create Table TEMP_NOJALUR_IDM 1
             // sb.AppendLine("CREATE TABLE TEMP_NOJALUR_IDM ")
             // sb.AppendLine("AS ")
@@ -2283,7 +2650,7 @@ class Controller extends BaseController
             // sb.AppendLine("       And K.PLUKARTON = pbi.PLUKARTON ")
             // sb.AppendLine("   ) ")
 
-        }else{
+        // }else{
             //! Delete From TEMP_NOJALUR_IDM
             // sb.AppendLine("Delete From TEMP_NOJALUR_IDM ")
             // sb.AppendLine(" Where REQ_ID = '" & IP & "' ")
@@ -2362,7 +2729,7 @@ class Controller extends BaseController
             // sb.AppendLine("       And K.fdtgpb = to_date('" & tglPB & "','DD-MM-YYYY') ")
             // sb.AppendLine("       And K.PLUKARTON = pbi.PLUKARTON ")
             // sb.AppendLine("   ) ")
-        }
+        // }
 
         //! INSERT INTO TEMP_NOJALUR_IDM 2
         // sb.AppendLine("INSERT INTO TEMP_NOJALUR_IDM ")
@@ -2646,7 +3013,7 @@ class Controller extends BaseController
         // sb.AppendLine(" Where upper(table_name) = 'TBMASTER_MARGINPLUIDM' ")
 
         //! INSERT KE MASDPB BULKY
-        if(jum > 0){
+        // if(jum > 0){
             // sb.AppendLine("Insert Into tbMaster_PBOmi ")
             // sb.AppendLine("( ")
             // sb.AppendLine(" pbo_kodeigr, ")
@@ -2704,7 +3071,7 @@ class Controller extends BaseController
             // sb.AppendLine("     and fdtgpb = to_date('" & tglPB & "','DD-MM-YYYY')   ")
             // sb.AppendLine("     and qtyb > 0 ")
             // sb.AppendLine("     and COALESCE(TolakMinJ,'X') <> 'T' ")
-        }else{
+        // }else{
             // sb.AppendLine("Insert Into tbMaster_PBOmi ")
             // sb.AppendLine("( ")
             // sb.AppendLine(" pbo_kodeigr, ")
@@ -2761,7 +3128,7 @@ class Controller extends BaseController
             // sb.AppendLine("   and qtyb > 0 ")
             // sb.AppendLine("   and prd_prdcd = PLUKarton ")
             // sb.AppendLine("   and COALESCE(TolakMinJ,'X') <> 'T' ")
-        }
+        // }
 
         //! GET -> PBO_NoUrut
         // sb.AppendLine("Select COALESCE(Max(pbo_nourut),1) ")
@@ -2776,7 +3143,7 @@ class Controller extends BaseController
         // sb.AppendLine(" Where upper(table_name) = 'TBMASTER_MARGINPLUIDM' ")
 
         //! INSERT KE MASDPB PIECES
-        if(jum > 0){
+        // if(jum > 0){
             // sb.AppendLine("Insert Into tbMaster_PBOmi ")
             // sb.AppendLine("( ")
             // sb.AppendLine(" pbo_kodeigr, ")
@@ -2834,7 +3201,7 @@ class Controller extends BaseController
             // sb.AppendLine("   and fdtgpb = to_date('" & tglPB & "','DD-MM-YYYY')   ")
             // sb.AppendLine("   and qtyK > 0 ")
             // sb.AppendLine("   and COALESCE(TolakMinJ,'X') <> 'T' ")
-        }else{
+        // }else{
             // sb.AppendLine("Insert Into tbMaster_PBOmi ")
             // sb.AppendLine("( ")
             // sb.AppendLine(" pbo_kodeigr, ")
@@ -2891,11 +3258,11 @@ class Controller extends BaseController
             // sb.AppendLine("   and qtyK > 0 ")
             // sb.AppendLine("   and prd_prdcd = PLUKarton ")
             // sb.AppendLine("   and COALESCE(TolakMinJ,'X') <> 'T' ")
-        }
+        // }
 
-        #'-------------------------------'
-        #'+ UPDATE RECID TBMASTER_PBOMI +'
-        #'-------------------------------'
+        //! '-------------------------------'
+        //! '+ UPDATE RECID TBMASTER_PBOMI +'
+        //! '-------------------------------'
 
         //! UPDATE RECID = '3' TBMASTER_PBOMI JALUR KARTON
         // sb.AppendLine("Update tbMaster_PBOMI ")
@@ -3036,7 +3403,7 @@ class Controller extends BaseController
         // if(nothing update FLAG CSV_PB_IDM){
         //     ("Total Permintaan Semua Item Jumlahnya NOL (Silahkan Cek Di TBTR_TOLAKAN_PBOMI) !! " & vbNewLine & "TOKO : " & KodeToko & ",NOPB : " & noPB & " TGLPB : " & tglPB
 
-        //     #PANGGIL FUNCTION
+        //     //! PANGGIL FUNCTION
         //     RefreshGridHeader();
         //     return;
         // }

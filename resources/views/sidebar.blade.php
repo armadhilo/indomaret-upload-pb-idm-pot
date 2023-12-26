@@ -11,9 +11,15 @@
     <!-- Divider -->
     <hr class="sidebar-divider my-0">
     <li class="nav-item active">
-        <a class="nav-link" href="{{ url('/get-royalti') }}">
+        <a class="nav-link" href="{{ url('/home') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
-            <span>Home</span></a>
+            <span>Konversi PLU</span></a>
+    </li>
+
+    <li class="nav-item active">
+        <a class="nav-link" href="{{ url('/upload-pot') }}">
+            <i class="fas fa-fw fa-tachometer-alt"></i>
+            <span>Upload PB POT</span></a>
     </li>
 
     <!-- Divider -->
