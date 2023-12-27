@@ -75,15 +75,15 @@
                     <div class="card-body">
                         <div class="header">
                             <div class="form-group header-input">
-                                <label for="">PATH FILE PBA* .DBF</label>
-                                <input type="text" class="form-control">
+                                <label for="dbf-input">PATH FILE PBA* .DBF</label>
+                                <input type="file" id="dbf-input" class="form-control" multiple webkitdirectory directory style="height: 47px;">
                             </div>
                             <div class="form-group header-input">
-                                <label for="">PATH FILE PBPOT* .CSV</label>
-                                <input type="text" class="form-control">
+                                <label for="csv-input">PATH FILE PBPOT* .CSV</label>
+                                <input type="file" id="csv-input" class="form-control" style="height: 47px;">
                             </div>
                         </div>
-                        <table class="table table-striped table-hover datatable-dark-primary" id="tb" style="margin-top: 20px">
+                        <table class="table table-striped table-hover datatable-dark-primary table-center" id="tb_pba" style="margin-top: 20px">
                             <thead>
                                 <tr>
                                     <th>No. PB</th>
@@ -94,10 +94,14 @@
                                     <th>NAMA FILE</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" class="text-center text-secondary">Data Masih Kosong</td>
+                                </tr>
+                            </tbody>
                         </table>
 
-                        <table class="table table-striped table-hover datatable-dark-primary" id="tb" style="margin-top: 20px">
+                        <table class="table table-striped table-hover table-center datatable-dark-primary" id="tb_plu" style="margin-top: 20px">
                             <thead>
                                 <tr>
                                     <th>PLU</th>
@@ -106,7 +110,11 @@
                                     <th>STOCK EKONOMIS</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                <tr>
+                                    <td colspan="6" class="text-center text-secondary">Data Masih Kosong</td>
+                                </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -139,9 +147,56 @@
     </div>
 
     @push('page-script')
+
     <script>
         $(document).ready(function(){
-            $('#modal_login').modal("show");
+            // $('#modal_login').modal("show");
+
+            $('#dbf-input').change(function(e){
+                let files = e.target.files;
+                let formData = new FormData();
+                for (var i = 0; i < files.length; i++) {
+                    formData.append('files[]', files[i]);
+                }                
+                $("#modal_loading").modal("show");
+                $.ajax({
+                    url: "/upload-pot/readDbf",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
+                        if(response.code === 200){
+                            $('#tb_pba tbody').empty();
+                            response.data.forEach(item => {
+                                let newRow = '<tr>' +
+                                    '<td>' + item.no_pb + '</td>' +
+                                    '<td>' + item.tgl_pb + '</td>' +
+                                    '<td>' + item.toko + '</td>' +
+                                    '<td>' + item.item + '</td>' +
+                                    '<td>' + formatRupiah(item.rupiah) + '</td>' +
+                                    '<td>' + item.nama_file + '</td>' +
+                                '</tr>';
+
+                                $('#tb_pba tbody').append(newRow);
+                            });
+                        } else {
+                            Swal.fire({
+                                text: response.message,
+                                icon: "error"
+                            });    
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
+                        Swal.fire({
+                            text: "Oops! Terjadi kesalahan segera hubungi tim IT (" + errorThrown + ")",
+                            icon: "error"
+                        });
+                    }
+                });
+            });
         });
 
         function login_pb(){
@@ -159,6 +214,7 @@
                             icon: "success"
                         });
                         $("#modal_login").modal('hide');
+                        $(".blur-container").removeClass("blur-container");
                     } else {
                         Swal.fire({
                             title: "error",

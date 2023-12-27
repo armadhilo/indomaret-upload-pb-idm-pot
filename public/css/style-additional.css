@@ -130,6 +130,10 @@ table td{
     background-color: #0da8ee !important;
 }
 
+.table-center thead tr th, .table-center tbody tr td{
+    text-align: center;
+}
+
 body.modal-open .blur-container{
     -webkit-filter: blur(20px);
     filter: blur(20px);

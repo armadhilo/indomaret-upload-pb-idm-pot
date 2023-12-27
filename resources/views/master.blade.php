@@ -57,8 +57,16 @@
     <script src="js/pace.min.js"></script>
     <script src="js/print.min.js"></script>
     <script src="js/jquery.number.min.js"></script>
+
+
     {{-- <script src="../resources/js/jquery.number.min.js.map"></script> --}}
     <script>
+        $.ajaxSetup({
+            headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                    // 'Authorization': '{{session()->get('token_jwt')}}',
+            }
+        });
         setInterval(refreshToken, 3900000); // 65min
 
         function refreshToken() {
@@ -70,6 +78,11 @@
                     console.log("token valid");
                 }
             });
+        }
+
+        function formatRupiah(amount) {
+            var rupiah = 'Rp. ' + amount.toFixed(0).replace(/(\d)(?=(\d{3})+$)/g, '$1,');
+            return rupiah;
         }
     </script>
     <!-- <script>

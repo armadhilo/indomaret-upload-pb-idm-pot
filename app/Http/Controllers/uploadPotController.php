@@ -11,7 +11,8 @@ use App\Http\Requests\UploadPotRequest;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Yajra\DataTables\Facades\DataTables;
+use XBase\TableReader;
+use Symfony\Component\HttpFoundation\Response;
 
 class UploadPotController extends Controller
 {
@@ -24,7 +25,53 @@ class UploadPotController extends Controller
 
         //!harus login dulu sebelum upload pb pot
         //*error message -> USERNAME ATAU PASSWORD SALAH
-        return view('upload-pot-login');
+        return view('upload-pot');
+    }
+
+    public function readDbf(Request $request){
+        $validator = validator($request->all(), [
+            'files.*' => 'file|mimes:dbf', // Adjust max file size if needed
+        ], [
+            'files.*.mimes' => 'Invalid file type. Please upload .dbf files.',
+        ]);
+
+        if ($validator->fails()) {
+            return [
+                'code' => 300,
+                'message' => $validator->errors()->first()
+            ];
+        }
+
+
+        $files = $request->file('files');
+
+        if (!$files || empty($files)) {
+            return [
+                'code' => 300,
+                'message' => "Files Tidak Ditemukan!"
+            ];
+        }
+        // Get the path to the uploaded file
+        $records = [];
+        foreach($files as $file){
+            $filePath = $file->getRealPath();
+            $fileName = $file->getClientOriginalName();
+            // Open the dBASE file using TableReader
+            $table = new TableReader($filePath);
+            while ($record = $table->nextRecord()) {
+                $total_rupiah = ($record->total === "" || $record->total === null) ? 0 : $record->total;
+                $records[] = [
+                    'no_pb' => $record->docno,
+                    'tgl_pb' => $record->tanggal,
+                    'toko' => $record->prdcd,
+                    'item' => $record->qty,
+                    'rupiah' => $total_rupiah,
+                    'nama_file' => $fileName,
+                ];
+            }
+        }
+
+        return ApiFormatter::success(200,"success", $records);
     }
 
     public function actionLogin(UploadPotLoginRequest $request){

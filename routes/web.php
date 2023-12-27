@@ -34,6 +34,7 @@ Route::middleware(['mylogin'])->group(function () {
 
     Route::group(['prefix' => 'upload-pot'], function(){
         Route::get('/', [UploadPotController::class, 'index']);
+        Route::post('/readDbf', [UploadPotController::class, 'readDbf']);
 
     });
 
