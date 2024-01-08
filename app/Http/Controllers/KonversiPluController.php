@@ -49,59 +49,76 @@ class KonversiPluController extends Controller
     }
 
     public function actionSave(KonversiPluSaveRequest $request){
-        //! CEK DI TABLE KONVERSI ATK UNTUK PLU DAN IGR YANG DI PILIH APAKAH SUDAH ADA
-        //! CEK SUDAH ADA BELUM PLUNYA
 
-        $data = DB::table('konversi_atk')
-            ->where([
-                'kat_pluidm' => $request->kat_pluidm,
-                'kat_pluigr' => $request->kat_pluigr,
-            ])->count();
+        DB::beginTransaction();
+	    try{
 
-        if($data > 0){
+            //! CEK DI TABLE KONVERSI ATK UNTUK PLU DAN IGR YANG DI PILIH APAKAH SUDAH ADA
+            //! CEK SUDAH ADA BELUM PLUNYA
 
-            //! CEK SUDAH ADA YG AKTIF??
             $data = DB::table('konversi_atk')
-            ->where([
-                'kat_pluidm' => $request->kat_pluidm,
-            ])
-            ->where('kat_pluigr', '!=', $request->kat_pluigr)
-            ->where('kat_flagaktif','>',0)
-            ->count();
+                ->where([
+                    'kat_pluidm' => $request->kat_pluidm,
+                    'kat_pluigr' => $request->kat_pluigr,
+                ])->count();
 
             if($data > 0){
-                $message = "PLU IDM : " . $request->kat_pluidm . " Sudah Mempunyai PLU IGR Yang Aktif !";
-                return ApiFormatter::error(400, $message);
 
-            }else{
+                //! CEK SUDAH ADA YG AKTIF??
+                $data = DB::table('konversi_atk')
+                ->where([
+                    'kat_pluidm' => $request->kat_pluidm,
+                ])
+                ->where('kat_pluigr', '!=', $request->kat_pluigr)
+                ->where('kat_flagaktif','>',0)
+                ->count();
 
-                //! UPDATE KONVERSI_ATK
-                DB::table('konversi_atk')
-                    ->where('kat_pluidm', '=', $request->kat_pluigr)
-                    ->where('kat_pluigr', '=', $request->kat_pluidm)
-                    ->update([
-                        'kat_deskripsi' => $request->description,
-                        'kat_flagaktif' => $request->flag_aktif == 1 ? 1 : 0,
-                        'kat_modify_by' => session('userid'),
-                        'kat_modify_dt' => now(), // Assuming you want to set the modification date to the current timestamp
-                    ]);
+                if($data > 0){
+                    $message = "PLU IDM : " . $request->kat_pluidm . " Sudah Mempunyai PLU IGR Yang Aktif !";
+                    return ApiFormatter::error(400, $message);
 
-                $message = 'Data Berhasil Diupdate !!';
-                return ApiFormatter::success(200, $message);
+                }else{
+
+                    //! UPDATE KONVERSI_ATK
+                    DB::table('konversi_atk')
+                        ->where('kat_pluidm', '=', $request->kat_pluidm)
+                        ->where('kat_pluigr', '=', $request->kat_pluigr)
+                        ->update([
+                            'kat_deskripsi' => $request->description,
+                            'kat_flagaktif' => $request->flag_aktif == 1 ? 1 : 0,
+                            'kat_modify_by' => session('userid'),
+                            'kat_modify_dt' => now(), // Assuming you want to set the modification date to the current timestamp
+                        ]);
+
+                    DB::commit();
+
+                    $message = 'Data Berhasil Diupdate !!';
+                    return ApiFormatter::success(200, $message);
+                }
             }
 
             //! CREATE KONVERSI_ATK
             DB::table('konversi_atk')->insert([
-                'kat_pluidm' => $request->kat_pluigr,
-                'kat_pluigr' => $request->kat_pluidm,
+                'kat_pluidm' => $request->kat_pluidm,
+                'kat_pluigr' => $request->kat_pluigr,
                 'kat_deskripsi' => $request->description,
                 'kat_flagaktif' => $request->flag_aktif == 1 ? 1 : 0,
                 'kat_create_by' => session('userid'),
                 'kat_create_dt' => now(), // Assuming you want to set the creation date to the current timestamp
             ]);
 
+            DB::commit();
+
             $message = 'Data Berhasil disimpan !!';
             return ApiFormatter::success(200, $message);
+        }
+
+        catch(\Exception $e){
+
+            DB::rollBack();
+
+            $message = "Oops! Something wrong ( $e )";
+            return ApiFormatter::error(400, $message);
         }
     }
 
