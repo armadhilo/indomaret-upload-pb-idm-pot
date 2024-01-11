@@ -77,6 +77,7 @@
                             <div class="form-group header-input">
                                 <label for="dbf-input">PATH FILE PBA* .DBF</label>
                                 <input type="file" id="dbf-input" class="form-control" multiple webkitdirectory directory style="height: 47px;">
+                                <span style="padding: 4px 10px; background: #7F1910; color: white; font-weight: 700; border-radius: 3px; height: 32px">* F3 - LOAD PBA</span>
                             </div>
                             <div class="form-group header-input">
                                 <label for="csv-input">PATH FILE PBPOT* .CSV</label>
@@ -151,52 +152,69 @@
     <script>
         $(document).ready(function(){
             // $('#modal_login').modal("show");
+        });
 
-            $('#dbf-input').change(function(e){
-                let files = e.target.files;
-                let formData = new FormData();
-                for (var i = 0; i < files.length; i++) {
-                    formData.append('files[]', files[i]);
-                }                
-                $("#modal_loading").modal("show");
-                $.ajax({
-                    url: "/upload-pot/readDbf",
-                    type: "POST",
-                    data: formData,
-                    contentType: false,
-                    processData: false,
-                    success: function(response) {
-                        setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
-                        if(response.code === 200){
-                            $('#tb_pba tbody').empty();
-                            response.data.forEach(item => {
-                                let newRow = '<tr>' +
-                                    '<td>' + item.no_pb + '</td>' +
-                                    '<td>' + item.tgl_pb + '</td>' +
-                                    '<td>' + item.toko + '</td>' +
-                                    '<td>' + item.item + '</td>' +
-                                    '<td>' + formatRupiah(item.rupiah) + '</td>' +
-                                    '<td>' + item.nama_file + '</td>' +
-                                '</tr>';
-
-                                $('#tb_pba tbody').append(newRow);
-                            });
-                        } else {
-                            Swal.fire({
-                                text: response.message,
-                                icon: "error"
-                            });    
-                        }
-                    },
-                    error: function(jqXHR, textStatus, errorThrown) {
-                        setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
-                        Swal.fire({
-                            text: "Oops! Terjadi kesalahan segera hubungi tim IT (" + errorThrown + ")",
-                            icon: "error"
-                        });
-                    }
+        function uploadDBF(){
+            let input = $('#dbf-input');
+            if(input.val() === null || input.val() === ''){
+                Swal.fire({
+                    text: "Mohon Isi File Path DBF Terlebih Dahulu",
+                    icon: "error"
                 });
+                return;
+            }
+            let files = input[0].files;
+            let formData = new FormData();
+            for (var i = 0; i < files.length; i++) {
+                formData.append('files[]', files[i]);
+            }                
+            $("#modal_loading").modal("show");
+            $.ajax({
+                url: "/upload-pot/readDbf",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(response) {
+                    setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
+                    if(response.code === 200){
+                        $('#tb_pba tbody').empty();
+                        response.data.forEach(item => {
+                            let newRow = '<tr>' +
+                                '<td>' + item.no_pb + '</td>' +
+                                '<td>' + item.tgl_pb + '</td>' +
+                                '<td>' + item.toko + '</td>' +
+                                '<td>' + item.item + '</td>' +
+                                '<td>' + formatRupiah(item.rupiah) + '</td>' +
+                                '<td>' + item.nama_file + '</td>' +
+                            '</tr>';
+
+                            $('#tb_pba tbody').append(newRow);
+                        });
+                    } else {
+                        Swal.fire({
+                            text: response.message,
+                            icon: "error"
+                        });    
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
+                    Swal.fire({
+                        text: "Oops! Terjadi kesalahan segera hubungi tim IT (" + errorThrown + ")",
+                        icon: "error"
+                    });
+                }
             });
+        };
+
+        $(document).keydown(function(e) {
+            // Check if the pressed key is F3 (key code 114)
+            if (e.which === 114 || e.keyCode === 114) {
+            // Call your function here
+                e.preventDefault();
+                uploadDBF();
+            }
         });
 
         function login_pb(){
