@@ -23,19 +23,26 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::get('/login', [LoginController::class, 'index']);
 Route::get('/logout', [LoginController::class, 'logout']);
 
-Route::middleware(['mylogin'])->group(function () {
+// Route::middleware(['mylogin'])->group(function () {
     //HOME
     Route::group(['prefix' => 'home'], function(){
 
         Route::get('/', [KonversiPluController::class, 'index']);
         Route::get('/datatables', [KonversiPluController::class, 'datatables']);
         Route::get('/igr-datatables', [KonversiPluController::class, 'helpIgr']);
+
+        Route::group(['prefix' => 'action'], function(){
+            Route::post('/save', [KonversiPluController::class, 'actionSave']);
+        });
     });
 
     Route::group(['prefix' => 'upload-pot'], function(){
         Route::get('/', [UploadPotController::class, 'index']);
+        Route::get('/datatables-head', [UploadPotController::class, 'datatablesHead']);
+        Route::get('/datatables-detail/{toko}', [UploadPotController::class, 'datatablesDetail']);
         Route::post('/readDbf', [UploadPotController::class, 'readDbf']);
+        Route::get('/prosesPBIDM', [UploadPotController::class, 'uploadPot']);
 
     });
 
-});
+// });
