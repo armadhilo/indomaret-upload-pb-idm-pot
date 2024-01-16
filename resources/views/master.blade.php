@@ -127,6 +127,20 @@
         </div>
     </div>
 
+    <script>
+        function formatDate(inputDateString) {
+            // Parse the original date string
+            var parts = inputDateString.split('-');
+            var formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+
+            // Format the date as "Y-m-d"
+            var formattedDateString = $.datepicker.formatDate('yy-mm-dd', formattedDate);
+
+            return formattedDateString;
+        }
+
+    </script>
+
     @stack('page-script')
 </body>
 

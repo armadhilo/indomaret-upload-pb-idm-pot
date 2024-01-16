@@ -12,7 +12,11 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use XBase\TableReader;
+use Yajra\DataTables\Facades\DataTables;
 use Symfony\Component\HttpFoundation\Response;
+use Barryvdh\DomPDF\Facade\Pdf;
+use ZipArchive;
+use Illuminate\Support\Facades\Storage;
 
 class UploadPotController extends Controller
 {
@@ -507,7 +511,6 @@ class UploadPotController extends Controller
                     tbmaster_stock,
                     tbmaster_prodmast
                 Where st_prdcd = pluigr
-                And ip = '" . $ip . "'
                 And st_lokasi = '01'
                 AND prd_prdcd = st_prdcd
                 AND prd_prdcd = pluigr
@@ -527,7 +530,8 @@ class UploadPotController extends Controller
             ORDER BY toko
         ");
 
-        return $data;
+        return DataTables::of($data)
+            ->make(true);
     }
 
     public function datatablesDetail($toko){
@@ -546,7 +550,7 @@ class UploadPotController extends Controller
         // sb.AppendLine("   AND IP = '" & IP & "' ")
         // sb.AppendLine(" Order By QTY ")
 
-        return DB::table('temp_csv_pb_pot')
+        $data = DB::table('temp_csv_pb_pot')
             ->selectRaw("
                 pluigr as plu,
                 prd_deskripsipanjang as desk,
@@ -557,11 +561,14 @@ class UploadPotController extends Controller
                 $join->on('prd_prdcd','=','pluigr');
             })
             ->where([
-                'ip' => $ip,
+                // 'ip' => $ip,
                 'toko' => $toko,
             ])
             ->orderBy('qty')
             ->get();
+
+        return DataTables::of($data)
+            ->make(true);
     }
 
     public function actionLogin(UploadPotLoginRequest $request){
@@ -592,6 +599,33 @@ class UploadPotController extends Controller
     //? 3.	F8 UNTUK PROSES UPLOAD DATA
 
     public function uploadPot(){ #PROSES F8
+
+        // Download Dummy PDF zip
+        $pdfs = [];
+
+        // Generate PDFs
+        $pdfs['order_ditolak.pdf'] = PDF::loadView('pdf.order-ditolak')->output();
+        $pdfs['rekap_order.pdf'] = PDF::loadView('pdf.rekap-order')->output();
+        $pdfs['cetakan_kertas.pdf'] = PDF::loadView('pdf.cetakan-kertas')->output();
+        $pdfs['list_order.pdf'] = PDF::loadView('pdf.list-order')->output();
+        $pdfs['karton_non_dpd.pdf'] = PDF::loadView('pdf.karton-non-dpd')->output();
+
+        $zipFileName = 'kode-toko.zip';
+        $zip = new ZipArchive();
+        $zip->open($zipFileName, ZipArchive::CREATE);
+
+        foreach ($pdfs as $filename => $pdfContent) {
+            $zip->addFromString($filename, $pdfContent);
+        }
+
+        $zip->close();
+
+        Storage::disk('local')->put($zipFileName, file_get_contents($zipFileName));
+
+        return response()->download(storage_path("app/{$zipFileName}"))->deleteFileAfterSend();
+        die;
+    
+
 
         //! HANDLING HANYA BISA JAM 12 MALAM
         //* ERROR MESSAGE->Mohon Tunggu Sampai JAM 12 MALAM

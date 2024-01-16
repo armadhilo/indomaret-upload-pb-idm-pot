@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Contracts\Validation\Validator;
+use App\Http\Controllers\Controller;
 
 class UploadPotRequest extends FormRequest
 {
@@ -28,9 +29,16 @@ class UploadPotRequest extends FormRequest
             'ip' => ['required'],
             'noPB' => ['required'],
             'KodeToko' => ['required'],
-            'tglPB' => ['required','date_format:Y-m-d'],
+            'tglPB' => ['required','date_format:d-m-Y'],
             'namaFile' => ['required'],
         ];
+    }
+
+    protected function prepareForValidation()
+    {
+        $controllerInstance = new Controller();
+        $ip = $controllerInstance->getIP();
+        $this->merge(['ip' => $ip]);
     }
 
     protected function failedValidation(Validator $validator) {
