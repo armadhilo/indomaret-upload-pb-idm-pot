@@ -67,6 +67,17 @@
         padding: 0 5px;
         color: #012970;
     }
+
+    @media(max-width: 1582px){
+        #display_help{
+            padding: 4px 9px;
+            font-size: .8rem;
+        }
+
+        #plu_igr, #plu_idm{
+            width: 40%!important;
+        }
+    }
 </style>
 @endsection
 
@@ -107,7 +118,7 @@
                                                 <div class="form-group detail-input">
                                                     <label for="">PLU IGR</label>
                                                     <input type="text" class="form-control" style="width: 50%" id="plu_igr">
-                                                    <span style="padding: 4px 10px; background: #E74A3B; color: white; font-weight: 700; border-radius: 3px">* F1 - HELP</span>
+                                                    <span id="display_help" style="padding: 4px 10px; background: #E74A3B; color: white; font-weight: 700; border-radius: 3px">* F1 - HELP</span>
                                                 </div>
                                             </div>
                                             <div class="col-12">

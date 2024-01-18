@@ -226,7 +226,8 @@
 
         }
         $(document).ready(function(){
-            // $('#modal_login').modal("show");
+            $('#modal_login').modal("show");
+            $('body').addClass('modal-blur');
             initializeDatatables();
         });
 
@@ -370,11 +371,12 @@
         });
 
         function login_pb(){
+            console.log('test');
             $("#modal_loading").modal("show");
             $.ajax({
                 url:  "/upload-pot/check-login",
                 type: "POST",
-                data: { username: $('#username'), password: $('#password') },
+                data: { user: $('#username').val(), password: $('#password').val() },
                 success: function(response){
                     setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
                     if(response.code === 200){
@@ -395,7 +397,9 @@
                 },error: function (jqXHR, textStatus, errorThrown){
                     setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
                     Swal.fire({
-                        text: "Oops! Terjadi kesalahan segera hubungi tim IT (" + errorThrown + ")",
+                        text: (jqXHR.responseJSON && jqXHR.responseJSON.code === 400)
+                            ? jqXHR.responseJSON.message
+                            : "Oops! Terjadi kesalahan segera hubungi tim IT (" + errorThrown + ")",
                         icon: "error"
                     });
                 }

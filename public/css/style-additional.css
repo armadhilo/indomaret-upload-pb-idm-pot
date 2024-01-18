@@ -134,7 +134,7 @@ table td{
     text-align: center;
 }
 
-body.modal-open .blur-container{
+body.modal-blur .blur-container{
     -webkit-filter: blur(20px);
     filter: blur(20px);
     -moz-filter: blur(20px);

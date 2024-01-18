@@ -578,9 +578,10 @@ class UploadPotController extends Controller
         // sb.AppendLine("   And userid = '" & Replace(txtUser.Text, "'", "") & "' ")
         // sb.AppendLine("   And userpassword = '" & Replace(txtPassword.Text, "'", "") & "'  ")
 
+        
         $data = DB::table('tbmaster_user')
-            ->where([
-                'kodeigr' => session('KODECABANG'),
+        ->where([
+            'kodeigr' => session('KODECABANG'),
                 'userid' => $request->user,
                 'userpassword' => $request->password,
             ])->first();
@@ -589,8 +590,8 @@ class UploadPotController extends Controller
             $message = 'Username atau Password Salah!!';
             return ApiFormatter::error(400, $message);
         }
-
-        return view('upload-pot');
+        
+        return ApiFormatter::success(200, "Login Berhasil..!");
     }
 
     //? FLOW
