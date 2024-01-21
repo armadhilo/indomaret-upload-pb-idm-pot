@@ -275,10 +275,12 @@ class Controller extends BaseController
     }
 
     public function getIP(){
+        return '10.80.250.222';
         return $_SERVER['REMOTE_ADDR'];
     }
 
-    public function CetakAll_1($kodeToko,$ip,$noPB,$tglPB, $PersenMargin){
+    //! LIST ORDER PB
+    public function CetakAll_1($kodeToko,$ip,$noPB,$tglPB,$PersenMargin){
 
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
@@ -286,7 +288,7 @@ class Controller extends BaseController
 
         $data['namaCabang'] = DB::table('tbmaster_perusahaan')
             ->select('prs_namacabang')
-            ->first();
+            ->first()->prs_namacabang;
 
         //! GET HEADER CETAKAN (NAMA TOKO)
         // sb.AppendLine("Select TKO_NamaOMI ")
@@ -295,14 +297,14 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        $data['namaToko'] = DB::table('tbMaster_TokoIGR')
-            ->select('TKO_NamaOMI')
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
             ->where([
-                'TKO_KodeIGR' => session('KODECABANG'),
-                'TKO_KodeOMI' => $kodeToko,
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
             ])
             ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->get();
+            ->first()->tko_namaomi;
 
         //! CHECK DATA
         // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
@@ -423,7 +425,6 @@ class Controller extends BaseController
                     and prd_prdcd = plukarton
             ");
 
-            // sb = New StringBuilder
             $data['data'] = DB::select("
                 Select plukarton as plu,
                     desk,
@@ -447,6 +448,7 @@ class Controller extends BaseController
         return $data;
     }
 
+    //! REKAP ORDER PB
     public function CetakAll_2($kodeToko,$ip,$noPB,$tglPB, $PersenMargin){
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
@@ -454,7 +456,7 @@ class Controller extends BaseController
 
         $data['namaCabang'] = DB::table('tbmaster_perusahaan')
             ->select('prs_namacabang')
-            ->first();
+            ->first()->prs_namacabang;
 
         //! GET HEADER CETAKAN (NAMA TOKO)
         // sb.AppendLine("Select TKO_NamaOMI ")
@@ -463,14 +465,14 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        $data['namaToko'] = DB::table('tbMaster_TokoIGR')
-            ->select('TKO_NamaOMI')
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
             ->where([
-                'TKO_KodeIGR' => session('KODECABANG'),
-                'TKO_KodeOMI' => $kodeToko,
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
             ])
             ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->get();
+            ->first()->tko_namaomi;
 
         //! CHECK DATA
         // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
@@ -579,10 +581,6 @@ class Controller extends BaseController
                     PRD_KodeDivisi
             ");
 
-            // ExecQRY(sb.ToString, "INSERT INTO PBIDM_REKAPORDER")
-            // '---- 24-03-2014
-
-            // sb = New StringBuilder
             $data['data'] = DB::select("
                 Select DIV_NamaDivisi as NamaDivisi,
                     PRD_KodeDivisi as KodeDivisi,
@@ -605,6 +603,7 @@ class Controller extends BaseController
         return $data;
     }
 
+    //! KARTON NON DPD
     public function CetakAll_3($kodeToko,$ip,$noPB,$tglPB){
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
@@ -612,7 +611,7 @@ class Controller extends BaseController
 
         $data['namaCabang'] = DB::table('tbmaster_perusahaan')
             ->select('prs_namacabang')
-            ->first();
+            ->first()->prs_namacabang;
 
         //! GET HEADER CETAKAN (NAMA TOKO)
         // sb.AppendLine("Select TKO_NamaOMI ")
@@ -621,19 +620,19 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        $data['namaToko'] = DB::table('tbMaster_TokoIGR')
-            ->select('TKO_NamaOMI')
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
             ->where([
-                'TKO_KodeIGR' => session('KODECABANG'),
-                'TKO_KodeOMI' => $kodeToko,
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
             ])
             ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->get();
+            ->first()->tko_namaomi;
 
         //! INSERT INTO PBIDM_KARTONNONDPD
         //? = "KARTON NON DPD"
         DB::select("
-            INSERT INTO PBIDM_KARTONNONDP
+            INSERT INTO PBIDM_KARTONNONDPD
             (
                 PBD_KODETOKO,
                 PBD_NOPB,
@@ -698,8 +697,11 @@ class Controller extends BaseController
                 And PRD_PRDCD = PLUKARTON
             Order By LKS_KodeRak,LKS_KodeSubRak,LKS_TipeRak,LKS_NoUrut
         ");
+
+        return $data;
     }
 
+    //! ITEM ORDER DITOLAK
     public function CetakAll_4($kodeToko,$ip,$noPB,$tglPB){
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
@@ -707,7 +709,7 @@ class Controller extends BaseController
 
         $data['namaCabang'] = DB::table('tbmaster_perusahaan')
             ->select('prs_namacabang')
-            ->first();
+            ->first()->prs_namacabang;
 
         //! GET HEADER CETAKAN (NAMA TOKO)
         // sb.AppendLine("Select TKO_NamaOMI ")
@@ -716,14 +718,14 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        $data['namaToko'] = DB::table('tbMaster_TokoIGR')
-            ->select('TKO_NamaOMI')
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
             ->where([
-                'TKO_KodeIGR' => session('KODECABANG'),
-                'TKO_KodeOMI' => $kodeToko,
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
             ])
             ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->get();
+            ->first()->tko_namaomi;
 
         //! ISI dtOrderDitolak
         //? f = "ORDER DITOLAK"
@@ -746,6 +748,7 @@ class Controller extends BaseController
         return $data;
     }
 
+    //! POSISI RAK JALUR TIDAK KETEMU
     public function CetakAll_5($kodeToko,$ip,$noPB,$tglPB){
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
@@ -753,7 +756,7 @@ class Controller extends BaseController
 
         $data['namaCabang'] = DB::table('tbmaster_perusahaan')
             ->select('prs_namacabang')
-            ->first();
+            ->first()->prs_namacabang;
 
         //! GET HEADER CETAKAN (NAMA TOKO)
         // sb.AppendLine("Select TKO_NamaOMI ")
@@ -762,19 +765,19 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        $data['namaToko'] = DB::table('tbMaster_TokoIGR')
-            ->select('TKO_NamaOMI')
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
             ->where([
-                'TKO_KodeIGR' => session('KODECABANG'),
-                'TKO_KodeOMI' => $kodeToko,
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
             ])
             ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->get();
+            ->first()->tko_namaomi;
 
         //! INSERT INTO PBIDM_RAKJALUR_TIDAKKETEMU
         //? f = "RAK JALUR TIDAK KETEMU";
         DB::select("
-            INSERT INTO PBIDM_RAKJALUR_TIDAKKETEM
+            INSERT INTO PBIDM_RAKJALUR_TIDAKKETEMU
             (
                 PBT_KODETOKO,
                 PBT_NOPB,
@@ -809,7 +812,7 @@ class Controller extends BaseController
                 coalesce(NJI.FDRCID,'X') as RECID,
                 '" . session('userid') . "',
                 CURRENT_DATE
-            From TEMP_NOJALUR_IDM NJI), tbMaster_Lokasi
+            From TEMP_NOJALUR_IDM NJI
             join tbMaster_Lokasi on LKS_PRDCD = PLUKARTON
             Where LKS_KodeIGR = '" . session('KODECABANG') . "'
                 And LKS_KodeRak Not Like 'D%'
@@ -866,6 +869,7 @@ class Controller extends BaseController
         return $data;
     }
 
+    //! JALUR CETAK KERTAS
     public function CetakAll_6($kodeToko,$ip,$noPB,$tglPB){
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
@@ -873,7 +877,7 @@ class Controller extends BaseController
 
         $data['namaCabang'] = DB::table('tbmaster_perusahaan')
             ->select('prs_namacabang')
-            ->first();
+            ->first()->prs_namacabang;
 
         //! GET HEADER CETAKAN (NAMA TOKO)
         // sb.AppendLine("Select TKO_NamaOMI ")
@@ -882,14 +886,14 @@ class Controller extends BaseController
         // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
         // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
 
-        $data['namaToko'] = DB::table('tbMaster_TokoIGR')
-            ->select('TKO_NamaOMI')
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
             ->where([
-                'TKO_KodeIGR' => session('KODECABANG'),
-                'TKO_KodeOMI' => $kodeToko,
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
             ])
             ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->get();
+            ->first()->tko_namaomi;
 
         //! INSERT INTO PBIDM_JALURKERTAS
         //? f = "JALUR CETAK KERTAS"
@@ -962,18 +966,18 @@ class Controller extends BaseController
         return $data;
     }
 
-    public function prosesPBIDM(){
+    public function prosesPBIDM($noPB,$kodeToko,$tglPB,$fullPathFile){
 
 
         DB::beginTransaction();
         try{
             $ip = $this->getIP();
-            $noPB = 'TZ4Z133';
-            $kodeToko = 'TZ4Z';
-            $tglPB = '10-10-2023';
+            // $noPB = 'TZ4Z133';
+            // $kodeToko = 'TZ4Z';
+            // $tglPB = '10-10-2023';
 
-            $namaFile = 'PBATZ4Z.DBF';
-            $fullPathFile = 'full-path/PBATZ4Z.DBF';
+            // $namaFile = 'PBATZ4Z.DBF';
+            // $fullPathFile = 'full-path/PBATZ4Z.DBF';
 
             $chkIDMBacaProdcrm = true;
 
@@ -3555,7 +3559,7 @@ class Controller extends BaseController
 
             if($data == 0){
                 //! Insert Into tbtr_CounterPbOMI
-                DB::insert([
+                DB::table('tbtr_counterpbomi')->insert([
                     'cou_kodeigr' => session('KODECABANG'),
                     'cou_kodeomi' => $kodeToko,
                     'cou_tgl' => Carbon::now(),
@@ -5219,7 +5223,14 @@ class Controller extends BaseController
 
             // DB::commit();
 
-            dd('success');
+            return [
+                'cetak_all_1' => $this->CetakALL_1($kodeToko, $ip, $noPB, $tglPB, $PersenMargin),
+                'cetak_all_2' => $this->CetakALL_2($kodeToko, $ip, $noPB, $tglPB, $PersenMargin),
+                'cetak_all_3' => $this->CetakALL_3($kodeToko, $ip, $noPB, $tglPB),
+                'cetak_all_4' => $this->CetakALL_4($kodeToko, $ip, $noPB, $tglPB),
+                'cetak_all_5' => $this->CetakALL_5($kodeToko, $ip, $noPB, $tglPB),
+                'cetak_all_6' => $this->CetakALL_6($kodeToko, $ip, $noPB, $tglPB),
+            ];
 
         } catch (HttpResponseException $e) {
             // Handle the custom response exception
@@ -5232,12 +5243,5 @@ class Controller extends BaseController
             $message = "Oops terjadi kesalahan ( $e )";
             throw new HttpResponseException(ApiFormatter::error(400, $message));
         }
-
-        // CetakALL_1(PersenMargin, CounterKarton, CounterKecil)  CALL FUNCTION
-        // CetakALL_2(PersenMargin, CounterKarton, CounterKecil)  CALL FUNCTION
-        // CetakALL_3(PersenMargin, CounterKarton, CounterKecil)  CALL FUNCTION
-        // CetakALL_4(PersenMargin, CounterKarton, CounterKecil)  CALL FUNCTION
-        // CetakALL_5(PersenMargin, CounterKarton, CounterKecil)  CALL FUNCTION
-        // CetakALL_6(PersenMargin, CounterKarton, CounterKecil)  CALL FUNCTION
     }
 }

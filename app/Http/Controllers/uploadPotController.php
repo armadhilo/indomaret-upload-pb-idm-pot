@@ -152,8 +152,6 @@ class UploadPotController extends Controller
                         ]);
 
                     //! KALAU ADA REVISI PB UNTUK HARI INI - HAPUS CSV_PB_BOT
-                    // $this->DeleteCSVPOT(KodeToko);
-
                     $this->DeleteCSVPOT($KodeToko);
 
                     //! ISI CSV PB POT
@@ -439,7 +437,7 @@ class UploadPotController extends Controller
         // sb.AppendLine("   And CPP_FLAG IS NULL ")
         // sb.AppendLine("   And CPP_IP = '" & IP & "' ")
 
-        DB::select("
+        DB::insert("
             INSERT INTO temp_csv_pb_pot
             (
                 nopb,
@@ -561,7 +559,7 @@ class UploadPotController extends Controller
                 $join->on('prd_prdcd','=','pluigr');
             })
             ->where([
-                // 'ip' => $ip,
+                'ip' => $ip,
                 'toko' => $toko,
             ])
             ->orderBy('qty')
@@ -578,7 +576,6 @@ class UploadPotController extends Controller
         // sb.AppendLine("   And userid = '" & Replace(txtUser.Text, "'", "") & "' ")
         // sb.AppendLine("   And userpassword = '" & Replace(txtPassword.Text, "'", "") & "'  ")
 
-        
         $data = DB::table('tbmaster_user')
         ->where([
             'kodeigr' => session('KODECABANG'),
@@ -590,7 +587,7 @@ class UploadPotController extends Controller
             $message = 'Username atau Password Salah!!';
             return ApiFormatter::error(400, $message);
         }
-        
+
         return ApiFormatter::success(200, "Login Berhasil..!");
     }
 
@@ -599,19 +596,32 @@ class UploadPotController extends Controller
     //? 2.	F3 UNTUK TARIK DATA SEHINGGA TAMPIL DI GRID (HEADER DAN DETAIL)
     //? 3.	F8 UNTUK PROSES UPLOAD DATA
 
-    public function uploadPot(){ #PROSES F8
+    public function uploadPot(Request $request){ #PROSES F8
+
+        $ip = $this->getIP();
+        $noPB = $request->noPB;
+        $KodeToko = $request->KodeToko;
+        $tglPB = $request->tglPB;
+        $namaFile = $request->namaFile;
+
+        //! HANDLING HANYA BISA JAM 12 MALAM
+        //* ERROR MESSAGE->Mohon Tunggu Sampai JAM 12 MALAM
+
+        $proses = $this->ProsesPBIDM($noPB,$KodeToko,$tglPB,'fullpath/'.$namaFile);
+
+        return $proses;
 
         // Download Dummy PDF zip
         $pdfs = [];
 
         // Generate PDFs
-        $pdfs['order_ditolak.pdf'] = PDF::loadView('pdf.order-ditolak')->output();
-        $pdfs['rekap_order.pdf'] = PDF::loadView('pdf.rekap-order')->output();
-        $pdfs['cetakan_kertas.pdf'] = PDF::loadView('pdf.cetakan-kertas')->output();
-        $pdfs['list_order.pdf'] = PDF::loadView('pdf.list-order')->output();
-        $pdfs['karton_non_dpd.pdf'] = PDF::loadView('pdf.karton-non-dpd')->output();
+        $pdfs['list_order.pdf'] = PDF::loadView('pdf.list-order', $proses['cetak_all_1'])->output();
+        $pdfs['rekap_order.pdf'] = PDF::loadView('pdf.rekap-order', $proses['cetak_all_2'])->output();
+        $pdfs['karton_non_dpd.pdf'] = PDF::loadView('pdf.karton-non-dpd', $proses['cetak_all_3'])->output();
+        $pdfs['item_order_ditolak.pdf'] = PDF::loadView('pdf.order-ditolak', $proses['cetak_all_4'])->output();
+        $pdfs['cetakan_kertas.pdf'] = PDF::loadView('pdf.cetakan-kertas', $proses['cetak_all_6'])->output();
 
-        $zipFileName = 'kode-toko.zip';
+        $zipFileName = $KodeToko . '.zip';
         $zip = new ZipArchive();
         $zip->open($zipFileName, ZipArchive::CREATE);
 
@@ -623,57 +633,30 @@ class UploadPotController extends Controller
 
         Storage::disk('local')->put($zipFileName, file_get_contents($zipFileName));
 
+        //! SET FLAG CSV_PB_IDM
+        // sb.AppendLine("UPDATE CSV_PB_POT ")
+        // sb.AppendLine("   SET CPP_FLAG = '1' ")
+        // sb.AppendLine(" WHERE CPP_IP = '" & IP & "' ")
+        // sb.AppendLine("   AND CPP_noPB = '" & noPB & "' ")
+        // sb.AppendLine("   AND CPP_KodeToko = '" & KodeToko & "' ")
+        // sb.AppendLine("   AND CPP_TglPB = TO_DATE('" & tglPB & "','DD-MM-YYYY') ")
+        // sb.AppendLine("   AND CPP_FLAG IS NULL ")
+
+        DB::table('csv_pb_pot')
+            ->where([
+                'cpp_ip' => $ip,
+                'cpp_nopb' =>  $noPB,
+                'cpp_kodetoko' =>  $KodeToko
+            ])
+            ->whereRaw("cpp_tglpb = TO_DATE('" . $tglPB . "','DD-MM-YYYY')")
+            ->whereNull('cpp_flag')
+            ->update([
+                'cpp_flag' => '1'
+            ]);
+
         return response()->download(storage_path("app/{$zipFileName}"))->deleteFileAfterSend();
-        die;
-    
 
-
-        //! HANDLING HANYA BISA JAM 12 MALAM
-        //* ERROR MESSAGE->Mohon Tunggu Sampai JAM 12 MALAM
-
-        //If dgvHeader.RowCount > 0 And dgvDetail.RowCount > 0
-
-        // noPB = dgvHeader.CurrentRow.Cells(0).Value
-        // tglPB = dgvHeader.CurrentRow.Cells(1).Value
-        // KodeToko = dgvHeader.CurrentRow.Cells(2).Value
-
-        $ip = $this->getIP();
-        $noPB = 'TZ4Z133';
-        $KodeToko = 'TZ4Z';
-        $tglPB = '10-10-2023';
-
-        $namaFile = 'PBATZ4Z.DBF';
-
-        $this->ProsesPBIDM();
-
-        dd('lolos');
-
-        // if(adaProses){
-            //! SET FLAG CSV_PB_IDM
-            // sb.AppendLine("UPDATE CSV_PB_POT ")
-            // sb.AppendLine("   SET CPP_FLAG = '1' ")
-            // sb.AppendLine(" WHERE CPP_IP = '" & IP & "' ")
-            // sb.AppendLine("   AND CPP_noPB = '" & noPB & "' ")
-            // sb.AppendLine("   AND CPP_KodeToko = '" & KodeToko & "' ")
-            // sb.AppendLine("   AND CPP_TglPB = TO_DATE('" & tglPB & "','DD-MM-YYYY') ")
-            // sb.AppendLine("   AND CPP_FLAG IS NULL ")
-
-            DB::table('csv_pb_pot')
-                ->where([
-                    'cpp_ip' => $ip,
-                    'cpp_nopb' =>  $noPB,
-                    'cpp_kodetoko' =>  $KodeToko
-                ])
-                ->whereRaw("cpp_tglpb = TO_DATE('" . $tglPB . "','DD-MM-YYYY')")
-                ->whereNull('cpp_flag')
-                ->update([
-                    'cpp_flag' => '1'
-                ]);
-
-            //$this->RefreshGridHeader()
-
-            // return PROSES UPLOAD PB IDM - POT SELESAI DILAKUKAN !",
-        // }
+        //* return PROSES UPLOAD PB IDM - POT SELESAI DILAKUKAN !",
     }
 
     private function formLoad(){
@@ -703,21 +686,21 @@ class UploadPotController extends Controller
             // sb.AppendLine(" ) ")
             // sb.AppendLine(" GROUP BY idm_kodeidm ")
             // sb.AppendLine(" HAVING COUNT(DISTINCT idm_pluidm) > 0 ")
-        }
 
-        DB::select("
-            SELECT idm_kodeidm, COUNT(DISTINCT idm_pluidm) jml_pluidm
-            FROM tbmaster_pluidm
-            WHERE idm_kodeigr = '" . $kodeigr . "'
-            AND EXISTS (
-                SELECT msi_kodedc
-                FROM master_supply_idm
-                WHERE msi_kodedc = idm_kodeidm
-                AND msi_kodeigr = idm_kodeigr
-            )
-            GROUP BY idm_kodeidm
-            HAVING COUNT(DISTINCT idm_pluidm) > 0
-        ");
+            DB::select("
+                SELECT idm_kodeidm, COUNT(DISTINCT idm_pluidm) jml_pluidm
+                FROM tbmaster_pluidm
+                WHERE idm_kodeigr = '" . $kodeigr . "'
+                AND EXISTS (
+                    SELECT msi_kodedc
+                    FROM master_supply_idm
+                    WHERE msi_kodedc = idm_kodeidm
+                    AND msi_kodeigr = idm_kodeigr
+                )
+                GROUP BY idm_kodeidm
+                HAVING COUNT(DISTINCT idm_pluidm) > 0
+            ");
+        }
 
         // If dtCek.Rows.Count > 0 Then
         //     flagPLUIDM = IIf(jum = dtCek.Rows.Count, True, False)
