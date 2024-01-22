@@ -55,7 +55,7 @@
         <div style="width: 100%">
             <div class="header">
                 <div style="float: left;">
-                    <p style="font-size: .8rem;"><b>INDOGROSIR SEMARANG POST</b></p>
+                    <p style="font-size: .8rem;"><b>{{ $namaCabang }}</b></p>
                 </div>
                 <div style="float: right">
                     <p>Tanggal : {{ \Carbon\Carbon::now()->format('d-m-Y') . ' | Pukul :  ' . \Carbon\Carbon::now()->format('H.i.s') }}</p>
@@ -68,11 +68,11 @@
                 <p style="text-align: center"><b>ITEM JALUR CETAKAN KE KERTAS</b></p>
                 <div style="margin: 0 30px 35px 30px">
                     <div style="float: left">
-                        <p>Toko : DEMAK WELAHAN 75 (TY7Q)</p>
-                        <p>No. Order : 999</p>
+                        <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
+                        <p>No. Order : 99999 (Dummy)</p>
                     </div>
                     <div style="float: right">
-                        <p>Tgl : 27/08/2023</p>
+                        <p>Tgl : {{$tglPb}}</p>
                         <p>Batch : 6</p>
                     </div>
                 </div>
@@ -90,15 +90,18 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @foreach ($data as $item)
                         <tr>
-                            <td class="text-center">1</td>
-                            <td colspan="2"><b>GROUP : 0</b></td>
-                            <td class="text-center"></td>
-                            <td class="text-center"><b>RAK :</b></td>
-                            <td class="text-center"></td>
-                            <td class="text-center"></td>
-                            <td class="text-center"></td>
+                            <td class="text-center">{{ $loop->iteration }}</td>
+                            <td>{{ $item->plu }}</td>
+                            <td>{{ $item->koderak }}</td>
+                            <td>{{ $item->desk }}</td>
+                            <td>{{ $item->prd_kodetag }}</td>
+                            <td>{{ $item->order }}</td>
+                            <td>{{ $item->unit }}</td>
+                            <td>{{ $item->stok }}</td>
                         </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>

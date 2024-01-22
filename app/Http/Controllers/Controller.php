@@ -282,6 +282,9 @@ class Controller extends BaseController
     //! LIST ORDER PB
     public function CetakAll_1($kodeToko,$ip,$noPB,$tglPB,$PersenMargin){
 
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
@@ -450,6 +453,10 @@ class Controller extends BaseController
 
     //! REKAP ORDER PB
     public function CetakAll_2($kodeToko,$ip,$noPB,$tglPB, $PersenMargin){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
@@ -605,6 +612,10 @@ class Controller extends BaseController
 
     //! KARTON NON DPD
     public function CetakAll_3($kodeToko,$ip,$noPB,$tglPB){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
@@ -703,6 +714,10 @@ class Controller extends BaseController
 
     //! ITEM ORDER DITOLAK
     public function CetakAll_4($kodeToko,$ip,$noPB,$tglPB){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
@@ -750,6 +765,10 @@ class Controller extends BaseController
 
     //! POSISI RAK JALUR TIDAK KETEMU
     public function CetakAll_5($kodeToko,$ip,$noPB,$tglPB){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")
@@ -871,6 +890,10 @@ class Controller extends BaseController
 
     //! JALUR CETAK KERTAS
     public function CetakAll_6($kodeToko,$ip,$noPB,$tglPB){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
         //! GET HEADER CETAKAN (NAMA CABANG)
         // sb.AppendLine("Select PRS_NamaCabang ")
         // sb.AppendLine("  From tbMaster_perusahaan ")

@@ -55,8 +55,8 @@
         <div style="width: 100%">
             <div class="header">
                 <div style="float: left;">
-                    <p style="font-size: .8rem;"><b>INDOGROSIR SEMARANG POST</b></p>
-                    <p>Toko : DEMAK WELAHAN 75 (TY7Q)</p>
+                    <p style="font-size: .8rem;"><b>{{ $namaCabang }}</b></p>
+                    <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
                 </div>
                 <div style="float: right">
                     <p>Tanggal : {{ \Carbon\Carbon::now()->format('d-m-Y') . ' | Pukul :  ' . \Carbon\Carbon::now()->format('H.i.s') }}</p>
@@ -67,9 +67,9 @@
             <div class="body">
                 <p style="text-align: center"><b>LISTING TRANSFER ORDER</b></p>
                 <div style="margin: 12px 0;">
-                    
-                    <p style="float: left">No. Order : 999</p>
-                    <p style="float: right; text-align: right;">Tgl : 27/08/2023</p>
+
+                    <p style="float: left">No. Order : 99999 (Dummy)</p>
+                    <p style="float: right; text-align: right;">Tgl : {{$tglPb}}</p>
                 </div>
 
                 <table border="1" style="border-collapse: collapse; margin-top:20px" cellpadding="2">
@@ -88,25 +88,41 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="text-center">1</td>
-                            <td class="text-center">0012700</td>
-                            <td>AQUA AIR MINERAL BTL 600mL</td>
-                            <td class="text-center">CTN/24</td>
-                            <td class="text-center">5</td>
-                            <td class="text-center">200</td>
-                            <td class="text-center">10.450</td>
-                            <td class="text-center">1.254.000</td>
-                            <td class="text-center">137.940</td>
-                            <td class="text-center">1.391.000</td>
-                        </tr>
+
+                        @php
+                            $sum_nilai = 0;
+                            $sum_ppn = 0;
+                            $sum_total = 0;
+                        @endphp
+
+                        @foreach ($data as $item)
+
+                            @php
+                                $sum_nilai += $item->nilai;
+                                $sum_ppn += $item->ppn;
+                                $sum_total += $item->total;
+                            @endphp
+
+                            <tr>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">{{ $item->plu }}</td>
+                                <td>{{ $item->desk }}</td>
+                                <td class="text-center">{{ $item->unit }}</td>
+                                <td class="text-center">{{ $item->qty }}</td>
+                                <td class="text-center">{{ (int)$item->frc }}</td>
+                                <td class="text-center">{{ (int)$item->inpcs }}</td>
+                                <td class="text-center">{{ number_format($item->nilai,0,',','.'); }}</td>
+                                <td class="text-center">{{ number_format($item->ppn,0,',','.'); }}</td>
+                                <td class="text-center">{{ number_format($item->total,0,',','.'); }}</td>
+                            </tr>
+                        @endforeach
                     </tbody>
                     <tfoot>
                         <tr>
                             <td colspan="7" style="text-align: right"><b>TOTAL :</b></td>
-                            <td style="text-align: center">3.314.000</td>
-                            <td style="text-align: center">314.000</td>
-                            <td style="text-align: center">3.314.000</td>
+                            <td style="text-align: center">{{ number_format($sum_nilai,0,',','.'); }}</td>
+                            <td style="text-align: center">{{ number_format($sum_ppn,0,',','.'); }}</td>
+                            <td style="text-align: center">{{ number_format($sum_total,0,',','.'); }}</td>
                         </tr>
                     </tfoot>
                 </table>

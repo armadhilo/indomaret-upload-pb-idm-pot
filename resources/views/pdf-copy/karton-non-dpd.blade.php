@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>ORDER DITOLAK</title>
+    <title>KARTON NON-DPD</title>
     <style>
         body{
             font-family: sans-serif;
@@ -54,52 +54,56 @@
     <div class="container-fluid">
         <div style="width: 100%">
             <div class="header">
-                <div style="float: left">
-                    <p><b>{{ $namaCabang }}</b></p>
+                <div style="float: left;">
+                    <p style="font-size: .8rem;"><b>INDOGROSIR SEMARANG POST</b></p>
                 </div>
+                <div style="float: right">
+                    <p>Tanggal : {{ \Carbon\Carbon::now()->format('d-m-Y') . ' | Pukul :  ' . \Carbon\Carbon::now()->format('H.i.s') }}</p>
+                    <p style="text-align: right;"> Hal : <span class="page-number"></span></p>
+                </div>
+                <hr style="margin-top: 40px">
             </div>
 
             <div class="body">
-                <div style="margin: 15px 30px 35px 30px">
+                <p style="text-align: center"><b>ITEM JALUR CETAKAN KE KERTAS</b></p>
+                <div style="margin: 0 30px 35px 30px">
                     <div style="float: left">
-                        <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
-                        <p>No. Order : 99999 (Dummy)</p>
+                        <p>Toko : DEMAK WELAHAN 75 (TY7Q)</p>
+                        <p>No. Order : 999</p>
                     </div>
                     <div style="float: right">
-                        <p><b>LISTING ITEM ORDER PB YG DITOLAK</b></p>
-                        <p>Tanggal : {{$tglPb}}</p>
+                        <p>Tgl : 27/08/2023</p>
+                        <p>Batch : 6</p>
                     </div>
                 </div>
-                <hr>
-                <table border="1" style="border-collapse: collapse; margin-top:10px" cellpadding="2">
+                <table border="1" style="border-collapse: collapse; margin-top:20px" cellpadding="2">
                     <thead>
                         <tr>
                             <th style="width: 4%">No</th>
-                            <th>IDM</th>
-                            <th>IGR</th>
-                            <th>DESKRIPSI BARANG</th>
-                            <th>UNIT</th>
-                            <th>QTY</th>
-                            <th>KETERANGAN</th>
+                            <th>PLU</th>
+                            <th>ItmRak</th>
+                            <th>Nama Barang</th>
+                            <th>Tag</th>
+                            <th>Order</th>
+                            <th>Unit</th>
+                            <th>Stok</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($data as $item)
-
-                        @endforeach
                         <tr>
-                            <td class="text-center">{{ $loop->iteration }}</td>
-                            <td class="text-center">{{ $item->pluidm }}</td>
-                            <td class="text-center">{{ $item->pluigr }}</td>
-                            <td>{{ $item->desk }}</td>
-                            <td class="text-center">{{ $item->unit }}</td>
-                            <td class="text-center">{{ (int)$item->qty }}</td>
-                            <td class="text-center">{{ $item->keterangan }}</td>
+                            <td class="text-center">1</td>
+                            <td colspan="2"><b>GROUP : 0</b></td>
+                            <td class="text-center"></td>
+                            <td class="text-center"><b>RAK :</b></td>
+                            <td class="text-center"></td>
+                            <td class="text-center"></td>
+                            <td class="text-center"></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
+        <p style="margin-top: 5px"># 1.00 item.</p>
     </div>
 
     <script type="text/php">

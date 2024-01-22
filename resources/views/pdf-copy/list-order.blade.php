@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>REKAP ORDER</title>
+    <title>LIST ORDER</title>
     <style>
         body{
             font-family: sans-serif;
@@ -56,71 +56,59 @@
             <div class="header">
                 <div style="float: left;">
                     <p style="font-size: .8rem;"><b>{{ $namaCabang }}</b></p>
+                    <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
                 </div>
                 <div style="float: right">
                     <p>Tanggal : {{ \Carbon\Carbon::now()->format('d-m-Y') . ' | Pukul :  ' . \Carbon\Carbon::now()->format('H.i.s') }}</p>
                     <p style="text-align: right;"> Hal : <span class="page-number"></span></p>
                 </div>
-                <hr style="margin-top: 40px">
             </div>
 
             <div class="body">
-                <p style="text-align: center"><b>REKAP ORDER PER DIVISI</b></p>
-                <div style="margin: 0 30px 35px 30px">
-                    <div style="float: left">
-                        <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
-                        <p>No. Order : 99999 (Dummy)</p>
-                    </div>
-                    <div style="float: right">
-                        <p>Tgl : {{$tglPb}}</p>
-                    </div>
+                <p style="text-align: center"><b>LISTING TRANSFER ORDER</b></p>
+                <div style="margin: 12px 0;">
+
+                    <p style="float: left">No. Order : 99999 (Dummy)</p>
+                    <p style="float: right; text-align: right;">Tgl : {{$tglPb}}</p>
                 </div>
+
                 <table border="1" style="border-collapse: collapse; margin-top:20px" cellpadding="2">
                     <thead>
                         <tr>
                             <th style="width: 4%">No</th>
-                            <th colspan="2">DIVISI</th>
-                            <th>ITEM</th>
-                            <th>NILAI</th>
-                            <th>PPN</th>
-                            <th>SUBTOTAL</th>
+                            <th>PLU</th>
+                            <th style="width: 30%">Deskripsi Barang</th>
+                            <th>Unit</th>
+                            <th>Qty</th>
+                            <th>Frc</th>
+                            <th>In PCS</th>
+                            <th>Harga</th>
+                            <th>Nilai</th>
+                            <th>Total Nominal</th>
                         </tr>
                     </thead>
                     <tbody>
-
-                        @php
-                            $total_item = 0;
-                            $total_nilai = 0;
-                            $total_ppn = 0;
-                            $total_subtotal = 0;
-                        @endphp
-
                         @foreach ($data as $item)
-
-                            @php
-                                $total_item += $item->item;
-                                $total_nilai += $item->nilai;
-                                $total_ppn += $item->ppn;
-                                $total_subtotal += $item->subtotal;
-                            @endphp
-
                             <tr>
                                 <td class="text-center">{{ $loop->iteration }}</td>
-                                <td colspan="2">{{ $item->namadivisi }}</td>
-                                <td class="text-center">{{ (int)$item->item }}</td>
-                                <td class="text-center">{{ number_format($item->nilai,0,',','.'); }}</td>
-                                <td class="text-center">{{ number_format($item->ppn,0,',','.'); }}</td>
-                                <td class="text-center">{{ number_format($item->subtotal,0,',','.'); }}</td>
+                                <td class="text-center">{{ $item->plu }}</td>
+                                <td>AQUA AIR MINERAL BTL 600mL</td>
+                                <td class="text-center">CTN/24</td>
+                                <td class="text-center">5</td>
+                                <td class="text-center">200</td>
+                                <td class="text-center">10.450</td>
+                                <td class="text-center">1.254.000</td>
+                                <td class="text-center">137.940</td>
+                                <td class="text-center">1.391.000</td>
                             </tr>
                         @endforeach
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td colspan="3" style="text-align: right"><b>TOTAL TRANSFER : &nbsp;</b></td>
-                            <td class="text-center">{{ $total_item }}</td>
-                            <td class="text-center">{{ number_format($total_nilai,0,',','.'); }}</td>
-                            <td class="text-center">{{ number_format($total_ppn,0,',','.'); }}</td>
-                            <td class="text-center">{{ number_format($total_subtotal,0,',','.'); }}</td>
+                            <td colspan="7" style="text-align: right"><b>TOTAL :</b></td>
+                            <td style="text-align: center">3.314.000</td>
+                            <td style="text-align: center">314.000</td>
+                            <td style="text-align: center">3.314.000</td>
                         </tr>
                     </tfoot>
                 </table>

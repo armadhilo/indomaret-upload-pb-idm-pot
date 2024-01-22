@@ -55,19 +55,19 @@
         <div style="width: 100%">
             <div class="header">
                 <div style="float: left">
-                    <p><b>{{ $namaCabang }}</b></p>
+                    <p><b>INDOGROSIR SEMARANG POST</b></p>
                 </div>
             </div>
 
             <div class="body">
                 <div style="margin: 15px 30px 35px 30px">
                     <div style="float: left">
-                        <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
-                        <p>No. Order : 99999 (Dummy)</p>
+                        <p>Toko : DEMAK WELAHAN 75 (TY7Q)</p>
+                        <p>No. Order : 999</p>
                     </div>
                     <div style="float: right">
                         <p><b>LISTING ITEM ORDER PB YG DITOLAK</b></p>
-                        <p>Tanggal : {{$tglPb}}</p>
+                        <p>Tanggal : 12-01-2023</p>
                     </div>
                 </div>
                 <hr>
@@ -84,17 +84,14 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($data as $item)
-
-                        @endforeach
                         <tr>
-                            <td class="text-center">{{ $loop->iteration }}</td>
-                            <td class="text-center">{{ $item->pluidm }}</td>
-                            <td class="text-center">{{ $item->pluigr }}</td>
-                            <td>{{ $item->desk }}</td>
-                            <td class="text-center">{{ $item->unit }}</td>
-                            <td class="text-center">{{ (int)$item->qty }}</td>
-                            <td class="text-center">{{ $item->keterangan }}</td>
+                            <td class="text-center">1</td>
+                            <td class="text-center">T01</td>
+                            <td class="text-center">T01</td>
+                            <td>Lorem ipsum dolor sit amet consectetur!</td>
+                            <td class="text-center">BOX</td>
+                            <td class="text-center">1</td>
+                            <td class="text-center">Lorem ipsum dolor sit amet.</td>
                         </tr>
                     </tbody>
                 </table>
