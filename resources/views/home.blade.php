@@ -77,6 +77,18 @@
         #plu_igr, #plu_idm{
             width: 40%!important;
         }
+
+        #deskripsi{
+            width: 69%!important;
+        }
+
+        label{
+            font-size: 13px!important;
+        }
+
+        .table td{
+            font-size: .9rem
+        }
     }
 </style>
 @endsection
@@ -150,7 +162,7 @@
     </div>
 
     <div class="modal fade" role="dialog" id="modal" data-keyboard="false" data-backdrop="static">
-        <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-dialog modal-lg" role="document">
            <div class="modal-content">
                 <div class="modal-header br">
                     <h5 class="modal-title">Help Konversi ATK</h5>
@@ -212,7 +224,6 @@
 
             let tb_igr = $('#tb_igr').DataTable({
                 processing: true,
-                serverSide: true,
                 ajax: {
                     url: '/home/igr-datatables',
                     type: 'GET'
