@@ -28,8 +28,13 @@ class KonversiPluSaveRequest extends FormRequest
             'kat_pluidm' => ['required'],
             'kat_pluigr' => ['required'],
             'description' => ['required'],
-            'flag_aktif' => ['required','in:1,0'],
+            'flag_aktif' => ['nullable'],
         ];
+    }
+
+    protected function passedValidation()
+    {
+        $this->merge(['flag_aktif' => $this->has('flag_aktif') ? 1 : 0]);
     }
 
     protected function failedValidation(Validator $validator) {

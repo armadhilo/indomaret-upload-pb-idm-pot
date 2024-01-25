@@ -123,27 +123,27 @@
                                             <div class="col-12">
                                                 <div class="form-group detail-input">
                                                     <label for="">PLU IDM</label>
-                                                    <input type="text" class="form-control" style="width: 50%" id="plu_idm">
+                                                    <input type="text" class="form-control" style="width: 50%" id="plu_idm" name="kat_pluidm">
                                                 </div>
                                             </div>
                                             <div class="col-12">
                                                 <div class="form-group detail-input">
                                                     <label for="">PLU IGR</label>
-                                                    <input type="text" class="form-control" style="width: 50%" id="plu_igr">
+                                                    <input type="text" class="form-control" style="width: 50%" id="plu_igr" name="kat_pluigr">
                                                     <span id="display_help" style="padding: 4px 10px; background: #E74A3B; color: white; font-weight: 700; border-radius: 3px">* F1 - HELP</span>
                                                 </div>
                                             </div>
                                             <div class="col-12">
                                                 <div class="form-group detail-input">
                                                     <label for="">DESKRIPSI</label>
-                                                    <input type="text" class="form-control" style="width: 85%" id="deskripsi" placeholder="E-PRINT PITA PRINTER REFILL 8758 BOX 12m">
+                                                    <input type="text" class="form-control" style="width: 85%" id="deskripsi" name="description" placeholder="E-PRINT PITA PRINTER REFILL 8758 BOX 12m">
                                                 </div>
                                             </div>
                                             <div class="col-12">
                                                 <div class="form-group detail-input">
                                                     <label for="">AKTIF</label>
                                                     <div style="width: 25%">
-                                                        <input type="checkbox" class="form-control" id="aktif" style="width: 30px; height: 30px; cursor: pointer">
+                                                        <input type="checkbox" class="form-control" id="aktif" name="flag_aktif" style="width: 30px; height: 30px; cursor: pointer">
                                                     </div>
                                                 </div>
                                             </div>
@@ -194,8 +194,9 @@
 
     @push('page-script')
     <script>
+        let tb;
         $(document).ready(function() {
-            let tb = $('#tb').DataTable({
+            tb = $('#tb').DataTable({
                 processing: true,
                 serverSide: true,
                 ajax: {
@@ -260,7 +261,7 @@
                 if (result.value) {
                     $("#modal_loading").modal('show');
                     $.ajax({
-                        url:  "/home/",
+                        url:  "/home/action/save",
                         type: "POST",
                         data: $('#form').serialize(),
                         success: function(response){
@@ -271,6 +272,7 @@
                                     text: response.message,
                                     icon: "success"
                                 });
+                                tb.ajax.reload();
                             }
                         },error: function (jqXHR, textStatus, errorThrown){
                             setTimeout(function () {  $('#modal_loading').modal('hide'); }, 500);
