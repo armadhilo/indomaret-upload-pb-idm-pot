@@ -85,17 +85,16 @@
                     </thead>
                     <tbody>
                         @foreach ($data as $item)
-
+                            <tr>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">{{ $item->pluidm }}</td>
+                                <td class="text-center">{{ $item->pluigr }}</td>
+                                <td>{{ $item->desk }}</td>
+                                <td class="text-center">{{ $item->unit }}</td>
+                                <td class="text-center">{{ (int)$item->qty }}</td>
+                                <td class="text-center">{{ $item->keterangan }}</td>
+                            </tr>
                         @endforeach
-                        <tr>
-                            <td class="text-center">{{ $loop->iteration }}</td>
-                            <td class="text-center">{{ $item->pluidm }}</td>
-                            <td class="text-center">{{ $item->pluigr }}</td>
-                            <td>{{ $item->desk }}</td>
-                            <td class="text-center">{{ $item->unit }}</td>
-                            <td class="text-center">{{ (int)$item->qty }}</td>
-                            <td class="text-center">{{ $item->keterangan }}</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>

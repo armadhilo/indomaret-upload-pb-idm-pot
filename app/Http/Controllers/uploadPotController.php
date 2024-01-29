@@ -596,6 +596,18 @@ class UploadPotController extends Controller
     //? 2.	F3 UNTUK TARIK DATA SEHINGGA TAMPIL DI GRID (HEADER DAN DETAIL)
     //? 3.	F8 UNTUK PROSES UPLOAD DATA
 
+    public function coba(){
+        $kodeToko = 'TZ4Z';
+        $ip = $this->getIP();
+        $noPB = 'TZ4Z133';
+        $tglPB = '10-10-2023';
+        $PersenMargin = 0;
+
+        $data = $this->CetakAll_6($kodeToko,$ip,$noPB,$tglPB);
+        return $data;
+        return view('pdf.cetakan-kertas', $data);
+    }
+
     public function uploadPot(Request $request){ #PROSES F8
 
         $ip = $this->getIP();
@@ -609,15 +621,13 @@ class UploadPotController extends Controller
 
         $proses = $this->ProsesPBIDM($noPB,$KodeToko,$tglPB,'fullpath/'.$namaFile);
 
-        return $proses;
-
         // Download Dummy PDF zip
         $pdfs = [];
 
         // Generate PDFs
         $pdfs['list_order.pdf'] = PDF::loadView('pdf.list-order', $proses['cetak_all_1'])->output();
         $pdfs['rekap_order.pdf'] = PDF::loadView('pdf.rekap-order', $proses['cetak_all_2'])->output();
-        $pdfs['karton_non_dpd.pdf'] = PDF::loadView('pdf.karton-non-dpd', $proses['cetak_all_3'])->output();
+        $pdfs['karton_non_dpd.pdf'] = PDF::loadView('pdf.karton-non-dpd', $proses['cetak_all_3'])->output(); //masih bingung resultnya
         $pdfs['item_order_ditolak.pdf'] = PDF::loadView('pdf.order-ditolak', $proses['cetak_all_4'])->output();
         $pdfs['cetakan_kertas.pdf'] = PDF::loadView('pdf.cetakan-kertas', $proses['cetak_all_6'])->output();
 

@@ -37,6 +37,7 @@ Route::get('/logout', [LoginController::class, 'logout']);
     });
 
     Route::group(['prefix' => 'upload-pot'], function(){
+        Route::get('/coba', [UploadPotController::class, 'coba']);
         Route::get('/', [UploadPotController::class, 'index']);
         Route::post('/check-login', [UploadPotController::class, 'actionLogin']);
         Route::get('/datatables-head', [UploadPotController::class, 'datatablesHead']);

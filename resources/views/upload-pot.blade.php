@@ -69,7 +69,7 @@
     }
 
     #tb_pba tbody tr{
-        cursor: pointer;    
+        cursor: pointer;
     }
 
     #loading_datatable{
@@ -117,9 +117,9 @@
                                     <span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span>
                                     Loading...
                                 </button>
-    
+
                             </div>
-    
+
                             <div class="position-relative mt-5">
                                 <table class="table table-striped table-hover table-center datatable-dark-primary" id="tb_plu" style="margin-top: 20px">
                                     <thead>
@@ -324,7 +324,7 @@
             let formData = new FormData();
             for (var i = 0; i < files.length; i++) {
                 formData.append('files[]', files[i]);
-            }                
+            }
             $("#modal_loading").modal("show");
             $.ajax({
                 url: "/upload-pot/readDbf",
@@ -363,6 +363,7 @@
                 uploadDBF();
             }
 
+            // Check if the pressed key is F8 (key code 114)
             else if (e.which === 119 || e.keyCode === 119) {
                 e.preventDefault();
                 uploadPBA();
