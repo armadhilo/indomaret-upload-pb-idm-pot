@@ -23,7 +23,7 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::get('/login', [LoginController::class, 'index']);
 Route::get('/logout', [LoginController::class, 'logout']);
 
-// Route::middleware(['mylogin'])->group(function () {
+Route::middleware(['mylogin'])->group(function () {
     //HOME
     Route::group(['prefix' => 'home'], function(){
 
@@ -47,4 +47,4 @@ Route::get('/logout', [LoginController::class, 'logout']);
 
     });
 
-// });
+});
