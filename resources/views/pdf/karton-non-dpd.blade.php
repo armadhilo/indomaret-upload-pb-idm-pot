@@ -68,12 +68,12 @@
                 <p style="text-align: center"><b>ITEM JALUR CETAKAN KE KERTAS</b></p>
                 <div style="margin: 0 30px 35px 30px">
                     <div style="float: left">
-                        <p>Toko : DEMAK WELAHAN 75 (TY7Q)</p>
-                        <p>No. Order : 999</p>
+                        <p>Toko : {{$namaToko}} ({{$kodeToko}})</p>
+                        <p>No. Order : 99999 (Dummy)</p>
                     </div>
                     <div style="float: right">
-                        <p>Tgl : 27/08/2023</p>
-                        <p>Batch : 6</p>
+                        <p>Tanggal : {{$tglPb}}</p>
+                        <p>Batch : 6 (Dummy)</p>
                     </div>
                 </div>
                 <table border="1" style="border-collapse: collapse; margin-top:20px" cellpadding="2">
@@ -90,20 +90,32 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td class="text-center">1</td>
-                            <td colspan="2"><b>GROUP : 0</b></td>
-                            <td class="text-center"></td>
-                            <td class="text-center"><b>RAK :</b></td>
-                            <td class="text-center"></td>
-                            <td class="text-center"></td>
-                            <td class="text-center"></td>
-                        </tr>
+                        @foreach ($data as $item)
+                            <tr>
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">{{ $item->plu }}</td>
+                                <td class="text-center">{{ $item->tiperak }}</td>
+                                <td>{{ $item->desk }}</td>
+                                <td class="text-center">{{ $item->tag }}</td>
+                                <td class="text-center">{{ $item->order }}</td>
+                                <td class="text-center">{{ $item->unit }}</td>
+                                <td class="text-center">{{ $item->stok }}</td>
+                            </tr>
+                            {{-- <tr>
+                                <td class="text-center">1</td>
+                                <td colspan="2"><b>GROUP : 0</b></td>
+                                <td class="text-center"></td>
+                                <td class="text-center"><b>RAK :</b></td>
+                                <td class="text-center"></td>
+                                <td class="text-center"></td>
+                                <td class="text-center"></td>
+                            </tr> --}}
+                        @endforeach
                     </tbody>
                 </table>
             </div>
         </div>
-        <p style="margin-top: 5px"># 1.00 item.</p>
+        <p style="margin-top: 5px"># {{ count($data) }}.00 item.</p>
     </div>
 
     <script type="text/php">
