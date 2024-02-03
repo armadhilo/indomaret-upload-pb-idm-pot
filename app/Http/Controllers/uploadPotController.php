@@ -596,18 +596,6 @@ class UploadPotController extends Controller
     //? 2.	F3 UNTUK TARIK DATA SEHINGGA TAMPIL DI GRID (HEADER DAN DETAIL)
     //? 3.	F8 UNTUK PROSES UPLOAD DATA
 
-    public function coba(){
-        $kodeToko = 'TZ4Z';
-        $ip = $this->getIP();
-        $noPB = 'TZ4Z133';
-        $tglPB = '10-10-2023';
-        $PersenMargin = 0;
-
-        $data = $this->CetakAll_6($kodeToko,$ip,$noPB,$tglPB);
-        return $data;
-        return view('pdf.cetakan-kertas', $data);
-    }
-
     public function uploadPot(Request $request){ #PROSES F8
 
         $ip = $this->getIP();
@@ -663,10 +651,15 @@ class UploadPotController extends Controller
             ->update([
                 'cpp_flag' => '1'
             ]);
+        
+        return ApiFormatter::success(200, "Proses PBIDM Berhasil..!", $zipFileName);
 
-        return response()->download(storage_path("app/{$zipFileName}"))->deleteFileAfterSend();
 
         //* return PROSES UPLOAD PB IDM - POT SELESAI DILAKUKAN !",
+    }
+
+    public function download_excel($zipName){
+        return response()->download(storage_path("app/{$zipName}"))->deleteFileAfterSend(true);
     }
 
     private function formLoad(){

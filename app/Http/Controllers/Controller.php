@@ -989,8 +989,6 @@ class Controller extends BaseController
     }
 
     public function prosesPBIDM($noPB,$kodeToko,$tglPB,$fullPathFile){
-
-
         DB::beginTransaction();
         try{
             // $noPB = 'TZ4Z133';

@@ -7,16 +7,19 @@
         </div>
         <div class="sidebar-brand-text mx-3">UPLOAD POT<sup>VB</sup></div>
     </a>
+    @php
+        $sub_url = Request::segment(1);
+    @endphp
 
     <!-- Divider -->
     <hr class="sidebar-divider my-0">
-    <li class="nav-item active">
+    <li class="nav-item @if($sub_url == 'home') active @endif">
         <a class="nav-link" href="{{ url('/home') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span>Konversi PLU</span></a>
     </li>
 
-    <li class="nav-item active">
+    <li class="nav-item @if($sub_url == 'upload-pot') active @endif">
         <a class="nav-link" href="{{ url('/upload-pot') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span>Upload PB POT</span></a>

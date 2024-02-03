@@ -252,8 +252,30 @@
                     let KodeToko = selectedRowData.toko;
                     let tglPB = selectedRowData.tglpb;
                     let namaFile = selectedRowData.nama_file;
-                    let url = "/upload-pot/prosesPBIDM?noPB=" + encodeURIComponent(noPB) + "&KodeToko=" + encodeURIComponent(KodeToko) + "&tglPB=" + encodeURIComponent(tglPB) + "&namaFile=" + encodeURIComponent(namaFile);
-                    window.open(url, '_blank');
+                    $("#modal_loading").modal("show");
+                    $.ajax({
+                        url: "/upload-pot/prosesPBIDM?noPB=" + encodeURIComponent(noPB) + "&KodeToko=" + encodeURIComponent(KodeToko) + "&tglPB=" + encodeURIComponent(tglPB) + "&namaFile=" + encodeURIComponent(namaFile),
+                        type: "GET",
+                        contentType: false,
+                        processData: false,
+                        success: function(response) {
+                            setTimeout(function () { $("#modal_loading").modal("hide"); }, 500);
+                            Swal.fire({
+                                title: "Success",
+                                text: response.message,
+                                icon: "success"
+                            }).then(function(){
+                                window.open('/upload-pot/download-excel/' + response.data, '_blank');
+                            });
+
+                        }, error: function(jqXHR, textStatus, errorThrown) {
+                            setTimeout(function () { $("#modal_loading").modal("hide"); }, 500);
+                            Swal.fire({
+                                text: jqXHR.responseJSON.message,
+                                icon: "error"
+                            });
+                        }
+                    });
                 }
             });
         }

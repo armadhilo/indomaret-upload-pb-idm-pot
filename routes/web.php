@@ -37,13 +37,13 @@ Route::middleware(['mylogin'])->group(function () {
     });
 
     Route::group(['prefix' => 'upload-pot'], function(){
-        Route::get('/coba', [UploadPotController::class, 'coba']);
         Route::get('/', [UploadPotController::class, 'index']);
         Route::post('/check-login', [UploadPotController::class, 'actionLogin']);
         Route::get('/datatables-head', [UploadPotController::class, 'datatablesHead']);
         Route::get('/datatables-detail/{toko}', [UploadPotController::class, 'datatablesDetail']);
         Route::post('/readDbf', [UploadPotController::class, 'readDbf']);
         Route::get('/prosesPBIDM', [UploadPotController::class, 'uploadPot']);
+        Route::get('/download-excel/{zipName}', [UploadPotController::class, 'download_excel']);
 
     });
 
