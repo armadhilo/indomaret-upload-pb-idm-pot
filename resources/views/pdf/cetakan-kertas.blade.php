@@ -73,7 +73,7 @@
                     </div>
                     <div style="float: right">
                         <p>Tgl : {{$tglPb}}</p>
-                        <p>Batch : 6</p>
+                        <p>Batch : {{$batch}}</p>
                     </div>
                 </div>
                 <table border="1" style="border-collapse: collapse; margin-top:20px" cellpadding="2">

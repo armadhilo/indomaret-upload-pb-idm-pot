@@ -267,730 +267,23 @@ class Controller extends BaseController
         ");
     }
 
-    public function getKodeDC($kodeToko){
-        //! GET KODE DC
-        //("SELECT msi_kodedc FROM master_supply_idm WHERE msi_kodetoko = '" & kodetoko & "'"
+    public function getKodeDC($kode_toko){
+        $data = DB::table('master_supply_idm')
+            ->where('msi_kodetoko', $kode_toko)
+            ->first();
 
-        return DB::table('master_supply_idm')->where('msi_kodetoko', $kodeToko)->first()->msi_kodedc;
+        return $data->msi_kodedc ?? '';
     }
 
     public function getIP(){
         return $_SERVER['REMOTE_ADDR'];
     }
 
-    //! LIST ORDER PB
-    public function CetakAll_1($kodeToko,$ip,$noPB,$tglPB,$PersenMargin){
-
-        $data['kodeToko'] = $kodeToko;
-        $data['tglPb'] = $tglPB;
-
-        //! GET HEADER CETAKAN (NAMA CABANG)
-        // sb.AppendLine("Select PRS_NamaCabang ")
-        // sb.AppendLine("  From tbMaster_perusahaan ")
-
-        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
-            ->select('prs_namacabang')
-            ->first()->prs_namacabang;
-
-        //! GET HEADER CETAKAN (NAMA TOKO)
-        // sb.AppendLine("Select TKO_NamaOMI ")
-        // sb.AppendLine("  From tbMaster_TokoIGR ")
-        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
-        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
-        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
-
-        $data['namaToko'] = DB::table('tbmaster_tokoigr')
-            ->select('tko_namaomi')
-            ->where([
-                'tko_kodeigr' => session('KODECABANG'),
-                'tko_kodeomi' => $kodeToko,
-            ])
-            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->first()->tko_namaomi;
-
-        //! CHECK DATA
-        // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
-        // sb.AppendLine("  From information_schema.columns ")
-        // sb.AppendLine(" Where UPPER(table_name) = 'TBMASTER_MARGINPLUIDM' ")
-
-        //! CETAK DATA 1
-        $check = DB::table('information_schema.columns')
-            ->whereRaw("UPPER(table_name) = 'TBMASTER_MARGINPLUIDM'")
-            ->count();
-
-        if($check > 0){
-
-            //! INSERT INTO PBIDM_LISTORDER
-            DB::select("
-                INSERT INTO PBIDM_LISTORDER
-                (
-                PBL_KODETOKO,
-                PBL_NOPB,
-                PBL_TGLPB,
-                PBL_PLU,
-                PBL_DESKRIPSI,
-                PBL_UNIT,
-                PBL_FRAC,
-                PBL_QTYB,
-                PBL_QTYK,
-                PBL_QTYO,
-                PBL_HRGSATUAN,
-                PBL_NILAI,
-                PBL_PPN,
-                PBL_TOTAL,
-                PBL_CREATE_BY,
-                PBL_CREATE_DT
-                )
-            Select '" . $kodeToko . "' as KODETOKO,
-                    '" . $noPB . "' as NoPB,
-                    TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
-                    plukarton as plu,
-                    desk,
-                    unitkarton as unit,
-                    frackarton as frac,
-                    qtyb as qty,
-                    qtyk as frc,
-                    fdqtyb as inpcs,
-                    Round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Harga,
-                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Nilai,
-                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
-                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTAL,
-                    '" . session('userid') . "',
-                    CURRENT_DATE
-                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_MarginPLUIDM
-            Where req_id = '" . $ip . "'
-                and fdnouo = '" . $noPB . "'
-                and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                and prd_prdcd = plukarton
-                and MPI_PluIGR = PLUKARTON
-            ");
-
-            $data['data'] = DB::select("
-                Select plukarton as plu,
-                    desk,
-                    unitkarton ||'/'|| frackarton as unit,
-                    qtyb as qty,
-                    qtyk as frc,
-                    fdqtyb as inpcs,
-                    Round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Harga,
-                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Nilai,
-                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
-                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTAL
-                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_MarginPLUIDM
-                Where req_id = '" . $ip . "'
-                    and fdnouo = '" . $noPB . "'
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarton
-                    and MPI_PluIGR = PLUKARTON
-                Order By plukarton
-            ");
-        }else{
-            //! INSERT INTO PBIDM_LISTORDER
-            DB::select("
-                INSERT INTO PBIDM_REKAPORDER
-                (
-                    PBL_KODETOKO,
-                    PBL_NOPB,
-                    PBL_TGLPB,
-                    PBL_PLU,
-                    PBL_DESKRIPSI,
-                    PBL_UNIT,
-                    PBL_QTYB,
-                    PBL_QTYK,
-                    PBL_QTYO,
-                    PBL_HRGSATUAN,
-                    PBL_NILAI,
-                    PBL_PPN,
-                    PBL_TOTAL,
-                    PBL_CREATE_BY,
-                    PBL_CREATE_DT
-                )
-                Select '" . $kodeToko . "' as KODETOKO
-                    '" . $noPB . "' as NoPB,
-                    TO_DATE('" . $tglPB . "','YYYYMMDD') as TglPB,
-                    plukarton as plu,
-                    desk,
-                    unitkarton ||'/'|| frackarton as unit,
-                    qtyb as qty,
-                    qtyk as frc,
-                    fdqtyb as inpcs,
-                    Round(avgcost * (1+ " . $PersenMargin . ")) as Harga,
-                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) as Nilai,
-                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
-                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTAL,
-                    '" . session('userid') . "',
-                    CURRENT_DATE
-                From temp_pbidm_ready, tbMaster_prodmast
-                Where req_id = '" . $ip . "'
-                    and fdnouo = '" . $noPB . "'
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarton
-            ");
-
-            $data['data'] = DB::select("
-                Select plukarton as plu,
-                    desk,
-                    unitkarton ||'/'|| frackarton as unit,
-                    qtyb as qty
-                    qtyk as frc,
-                    fdqtyb as inpcs,
-                    Round(avgcost * (1+ " . $PersenMargin . ")) as Harga
-                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) as Nilai
-                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN
-                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTA
-                From temp_pbidm_ready, tbMaster_prodmas
-                Where req_id = '" . $ip . "
-                    and fdnouo = '" . $noPB . "
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarto
-                Order By plukarto
-            ");
-        }
-
-        return $data;
-    }
-
-    //! REKAP ORDER PB
-    public function CetakAll_2($kodeToko,$ip,$noPB,$tglPB, $PersenMargin){
-
-        $data['kodeToko'] = $kodeToko;
-        $data['tglPb'] = $tglPB;
-
-        //! GET HEADER CETAKAN (NAMA CABANG)
-        // sb.AppendLine("Select PRS_NamaCabang ")
-        // sb.AppendLine("  From tbMaster_perusahaan ")
-
-        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
-            ->select('prs_namacabang')
-            ->first()->prs_namacabang;
-
-        //! GET HEADER CETAKAN (NAMA TOKO)
-        // sb.AppendLine("Select TKO_NamaOMI ")
-        // sb.AppendLine("  From tbMaster_TokoIGR ")
-        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
-        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
-        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
-
-        $data['namaToko'] = DB::table('tbmaster_tokoigr')
-            ->select('tko_namaomi')
-            ->where([
-                'tko_kodeigr' => session('KODECABANG'),
-                'tko_kodeomi' => $kodeToko,
-            ])
-            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->first()->tko_namaomi;
-
-        //! CHECK DATA
-        // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
-        // sb.AppendLine("  From information_schema.columns ")
-        // sb.AppendLine(" Where UPPER(table_name) = 'TBMASTER_MARGINPLUIDM' ")
-
-        //! CETAK DATA 1
-        $check = DB::table('information_schema.columns')
-            ->whereRaw("UPPER(table_name) = 'TBMASTER_MARGINPLUIDM'")
-            ->count();
-
-        if($check > 0){
-            //! INSERT INTO PBIDM_REKAPORDER
-            DB::select("
-                INSERT INTO PBIDM_REKAPORDER (
-                    PBR_KODETOKO,
-                    PBR_NOPB,
-                    PBR_TGLPB,
-                    PBR_NAMADIVISI,
-                    PBR_KODEDIVISI,
-                    PBL_ITEM,
-                    PBL_NILAI,
-                    PBL_PPN,
-                    PBL_SUBTOTAL,
-                    PBL_CREATE_BY,
-                    PBL_CREATE_DT
-                    )
-                Select '" . $kodeToko . "' as KODETOKO,
-                        '" . $noPB . "' as NoPB,
-                        TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
-                        DIV_NamaDivisi as NamaDivisi,
-                        PRD_KodeDivisi as KodeDivisi,
-                        Count(PLUKARTON) as Item,
-                        SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)))) as Nilai,
-                        SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
-                        SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL,
-                        '" . session('userid') . "',
-                        CURRENT_DATE
-                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi, tbMaster_MarginPLUIDM
-                Where req_id = '" . $ip . "'
-                    and fdnouo = '" . $noPB . "'
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarton
-                    and DIV_KodeDivisi = PRD_KodeDivisi
-                    and MPI_PluIGR = PLUKARTON
-                Group By DIV_NamaDivisi,
-                    PRD_KodeDivisi
-            ");
-
-            // ExecQRY(sb.ToString, "INSERT INTO PBIDM_REKAPORDER")
-            // '---- 24-03-2014
-
-            // sb = New StringBuilder
-            $data['data'] = DB::select("
-                Select DIV_NamaDivisi as NamaDivisi,
-                    PRD_KodeDivisi as KodeDivisi,
-                    Count(PLUKARTON) as Item,
-                    SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)))) as Nilai,
-                    SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
-                    SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL
-                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi, tbMaster_MarginPLUIDM
-                Where req_id = '" . $ip . "'
-                    and fdnouo = '" . $noPB . "'
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarton
-                    and DIV_KodeDivisi = PRD_KodeDivisi
-                    and MPI_PluIGR = PLUKARTON
-                Group By DIV_NamaDivisi,
-                    PRD_KodeDivisi
-                Order By PRD_KodeDivisi
-            ");
-        }else{
-            //! INSERT INTO PBIDM_REKAPORDER
-            DB::select("
-                INSERT INTO PBIDM_REKAPORDER (
-                    PBR_KODETOKO,
-                    PBR_NOPB,
-                    PBR_TGLPB,
-                    PBR_NAMADIVISI,
-                    PBR_KODEDIVISI,
-                    PBL_ITEM,
-                    PBL_NILAI,
-                    PBL_PPN,
-                    PBL_SUBTOTAL,
-                    PBL_CREATE_BY,
-                    PBL_CREATE_DT
-                    )
-                Select '" . $kodeToko . "' as KODETOKO
-                    '" . $noPB . "' as NoPB,
-                    TO_DATE('" . $tglPB . "','YYYYMMDD') as TglPB,
-                    DIV_NamaDivisi as NamaDivisi,
-                    PRD_KodeDivisi as KodeDivisi,
-                    Count(PLUKARTON) as Item,
-                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . "))) as Nilai,
-                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
-                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL,
-                    '" . session('userid') . "',
-                    CURRENT_DATE
-                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi
-                Where req_id = '" . $ip . "'
-                    and fdnouo = '" . $noPB . "'
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarton
-                    and DIV_KodeDivisi = PRD_KodeDivisi
-                Group By DIV_NamaDivisi,
-                    PRD_KodeDivisi
-            ");
-
-            $data['data'] = DB::select("
-                Select DIV_NamaDivisi as NamaDivisi,
-                    PRD_KodeDivisi as KodeDivisi,
-                    Count(PLUKARTON) as Item,
-                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . "))) as Nilai,
-                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
-                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL
-                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi
-                Where req_id = '" . $ip . "'
-                    and fdnouo = '" . $noPB . "'
-                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                    and prd_prdcd = plukarton
-                    and DIV_KodeDivisi = PRD_KodeDivisi
-                Group By DIV_NamaDivisi,
-                        PRD_KodeDivisi
-                Order By PRD_KodeDivisi
-            ");
-        }
-
-        return $data;
-    }
-
-    //! KARTON NON DPD
-    public function CetakAll_3($kodeToko,$ip,$noPB,$tglPB){
-
-        $data['kodeToko'] = $kodeToko;
-        $data['tglPb'] = $tglPB;
-
-        //! GET HEADER CETAKAN (NAMA CABANG)
-        // sb.AppendLine("Select PRS_NamaCabang ")
-        // sb.AppendLine("  From tbMaster_perusahaan ")
-
-        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
-            ->select('prs_namacabang')
-            ->first()->prs_namacabang;
-
-        //! GET HEADER CETAKAN (NAMA TOKO)
-        // sb.AppendLine("Select TKO_NamaOMI ")
-        // sb.AppendLine("  From tbMaster_TokoIGR ")
-        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
-        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
-        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
-
-        $data['namaToko'] = DB::table('tbmaster_tokoigr')
-            ->select('tko_namaomi')
-            ->where([
-                'tko_kodeigr' => session('KODECABANG'),
-                'tko_kodeomi' => $kodeToko,
-            ])
-            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->first()->tko_namaomi;
-
-        //! INSERT INTO PBIDM_KARTONNONDPD
-        //? = "KARTON NON DPD"
-        DB::select("
-            INSERT INTO PBIDM_KARTONNONDPD
-            (
-                PBD_KODETOKO,
-                PBD_NOPB,
-                PBD_TGLPB,
-                PBD_NAMAGROUP,
-                PBD_KODERAK,
-                PBD_SUBRAK,
-                PBD_TIPERAK,
-                PBD_PLU,
-                PBD_NOURUT,
-                PBD_DESKRIPSI,
-                PBD_TAG,
-                PBD_QTY,
-                PBD_UNIT,
-                PBD_FRAC,
-                PBD_STOK,
-                PBD_CREATE_BY,
-                PBD_CREATE_DT
-            )
-            Select '" . $kodeToko . "' as KODETOKO,
-                '" . $noPB . "' as NoPB,
-                TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
-                GRR_GroupRak as NamaGroup,
-                LKS_KodeRak as KodeRak,
-                LKS_KodeSubRak as SubRak,
-                LKS_TipeRak as TipeRak,
-                PLUKARTON as PLU,
-                LKS_NoUrut as NoUrut,
-                Desk,
-                PRD_KodeTag as TAG,
-                QTYB as Order,
-                UNITKarton,
-                FracKarton,
-                Stok,
-                '" . session('userid') . "',
-                CURRENT_DATE
-            From temp_karton_nondpd_idm,tbMaster_Prodmast
-            Where REQ_ID = '" . $ip . "'
-            And FDKCAB = '" . $kodeToko . "'
-            And FDNOUO = '" . $noPB . "'
-            And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
-            And PRD_PRDCD = PLUKARTON
-        ");
-
-        $data['data'] = DB::select("
-            Select DISTINCT GRR_GroupRak as NamaGroup,
-                LKS_KodeRak as KodeRak,
-                LKS_KodeSubRak as SubRak,
-                LKS_TipeRak as TipeRak,
-                PLUKARTON as PLU,
-                LKS_NoUrut as NoUrut,
-                Desk,
-                PRD_KodeTag as TAG,
-                QTYB as Order,
-                UNITKarton ||'/'|| FracKarton as UNIT,
-                Stok
-            From temp_karton_nondpd_idm,tbMaster_Prodmast
-            Where REQ_ID = '" . $ip . "'
-                And FDKCAB = '" . $kodeToko . "'
-                And FDNOUO = '" . $noPB . "'
-                And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
-                And PRD_PRDCD = PLUKARTON
-            Order By LKS_KodeRak,LKS_KodeSubRak,LKS_TipeRak,LKS_NoUrut
-        ");
-
-        return $data;
-    }
-
-    //! ITEM ORDER DITOLAK
-    public function CetakAll_4($kodeToko,$ip,$noPB,$tglPB){
-
-        $data['kodeToko'] = $kodeToko;
-        $data['tglPb'] = $tglPB;
-
-        //! GET HEADER CETAKAN (NAMA CABANG)
-        // sb.AppendLine("Select PRS_NamaCabang ")
-        // sb.AppendLine("  From tbMaster_perusahaan ")
-
-        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
-            ->select('prs_namacabang')
-            ->first()->prs_namacabang;
-
-        //! GET HEADER CETAKAN (NAMA TOKO)
-        // sb.AppendLine("Select TKO_NamaOMI ")
-        // sb.AppendLine("  From tbMaster_TokoIGR ")
-        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
-        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
-        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
-
-        $data['namaToko'] = DB::table('tbmaster_tokoigr')
-            ->select('tko_namaomi')
-            ->where([
-                'tko_kodeigr' => session('KODECABANG'),
-                'tko_kodeomi' => $kodeToko,
-            ])
-            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->first()->tko_namaomi;
-
-        //! ISI dtOrderDitolak
-        //? f = "ORDER DITOLAK"
-        $data['data'] = DB::select("
-            Select PLU as PLUIDM,
-                PLUIGR,
-                PRD_DeskripsiPanjang as DESK,
-                PRD_UNIT||'/'||PRD_Frac as UNIT,
-                QTYO as QTY,
-                KETA as Keterangan
-            From temp_cetakpb_tolakan_idm,tbMaster_Prodmast
-            Where REQ_ID = '" . $ip . "'
-                And KCAB = '" . $kodeToko . "'
-                And NODOK = '" . $noPB . "'
-                And TGLDOK = to_date('" . $tglPB . "','DD-MM-YYYY')
-                And PRD_PRDCD = PLUIGR
-                And KETA <> 'PLU TIDAK TERDAFTAR DI TBTEMP_PLUIDM'
-        ");
-
-        return $data;
-    }
-
-    //! POSISI RAK JALUR TIDAK KETEMU
-    public function CetakAll_5($kodeToko,$ip,$noPB,$tglPB){
-
-        $data['kodeToko'] = $kodeToko;
-        $data['tglPb'] = $tglPB;
-
-        //! GET HEADER CETAKAN (NAMA CABANG)
-        // sb.AppendLine("Select PRS_NamaCabang ")
-        // sb.AppendLine("  From tbMaster_perusahaan ")
-
-        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
-            ->select('prs_namacabang')
-            ->first()->prs_namacabang;
-
-        //! GET HEADER CETAKAN (NAMA TOKO)
-        // sb.AppendLine("Select TKO_NamaOMI ")
-        // sb.AppendLine("  From tbMaster_TokoIGR ")
-        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
-        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
-        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
-
-        $data['namaToko'] = DB::table('tbmaster_tokoigr')
-            ->select('tko_namaomi')
-            ->where([
-                'tko_kodeigr' => session('KODECABANG'),
-                'tko_kodeomi' => $kodeToko,
-            ])
-            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->first()->tko_namaomi;
-
-        //! INSERT INTO PBIDM_RAKJALUR_TIDAKKETEMU
-        //? f = "RAK JALUR TIDAK KETEMU";
-        DB::select("
-            INSERT INTO PBIDM_RAKJALUR_TIDAKKETEMU
-            (
-                PBT_KODETOKO,
-                PBT_NOPB,
-                PBT_TGLPB,
-                PBT_PLU,
-                PBT_DESKRIPSI,
-                PBT_KODERAK,
-                PBT_SUBRAK,
-                PBT_TIPERAK,
-                PBT_SHELVINGRAK,
-                PBT_QTYB,
-                PBT_QTYK,
-                PBT_UNITKARTON,
-                PBT_FRACKARTON,
-                PBT_RECORDID,
-                PBT_CREATE_BY,
-                PBT_CREATE_DT
-            )
-            Select DISTINCT '" . $kodeToko . "' as KODETOKO,
-                '" . $noPB . "' as NoPB,
-                TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
-                NJI.PluKarton as PLU,
-                NJI.DESK,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeRak,'') END as KodeRak,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeSubrak,'') END as SubRak,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_TipeRak,'') END as TipeRak,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_ShelvingRak,'') END as ShelvingRak,
-                NJI.QTYB as OrderCTN,
-                NJI.QTYK as OrderPCS,
-                NJI.UnitKarton,
-                NJI.FracKarton,
-                coalesce(NJI.FDRCID,'X') as RECID,
-                '" . session('userid') . "',
-                CURRENT_DATE
-            From TEMP_NOJALUR_IDM NJI
-            join tbMaster_Lokasi on LKS_PRDCD = PLUKARTON
-            Where LKS_KodeIGR = '" . session('KODECABANG') . "'
-                And LKS_KodeRak Not Like 'D%'
-                And REQ_ID = '" . $ip . "'
-                And FDKCAB = '" . $kodeToko . "'
-                And fdnouo = '" . $noPB . "'
-                And fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                And LKS_TIPERAK NOT LIKE  'S%'
-                And Not EXISTS
-                (
-                    Select grr_grouprak
-                        from tbmaster_grouprak,tbmaster_lokasi lks2
-                    where grr_koderak = lks2.lks_koderak
-                        and grr_subrak = lks2.lks_kodesubrak
-                        and LKS_KodeRak Like 'D%'
-                        And LKS_TIPERAK NOT LIKE 'S%'
-                        and lks_prdcd = plukarton
-                )
-        ");
-
-        // sb = New StringBuilder
-        $data['data'] = DB::select("
-            Select DISTINCT NJI.PluKarton as PLU,
-                NJI.DESK,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeRak,'') END as KodeRak,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeSubrak,'') END as SubRak,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_TipeRak,'') END as TipeRak,
-                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_ShelvingRak,'') END as ShelvingRak,
-                NJI.QTYB as OrderCTN,
-                NJI.QTYK as OrderPCS,
-                NJI.UnitKarton||'/'||NJI.FracKarton as UNIT,
-                coalesce(NJI.FDRCID,'X') as RECID
-            From TEMP_NOJALUR_IDM NJI, tbMaster_Lokasi
-            Where LKS_KodeIGR = '" . session('KODECABANG') . "'
-                And LKS_PRDCD = PLUKARTON
-                And LKS_KodeRak Not Like 'D%'
-                And REQ_ID = '" . $ip . "'
-                And FDKCAB = '" . $kodeToko . "'
-                And fdnouo = '" . $noPB . "'
-                And fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
-                And LKS_TIPERAK NOT LIKE  'S%'
-                And Not EXISTS(
-                    Select grr_grouprak
-                    from tbmaster_grouprak,tbmaster_lokasi lks2
-                    where grr_koderak = lks2.lks_koderak
-                    and grr_subrak = lks2.lks_kodesubrak
-                    and LKS_KodeRak Like 'D%'
-                    And LKS_TIPERAK NOT LIKE 'S%'
-                    and lks_prdcd = plukarton
-                )
-            Order By NJI.PLUKarton
-        ");
-
-        return $data;
-    }
-
-    //! JALUR CETAK KERTAS
-    public function CetakAll_6($kodeToko,$ip,$noPB,$tglPB){
-
-        $data['kodeToko'] = $kodeToko;
-        $data['tglPb'] = $tglPB;
-
-        //! GET HEADER CETAKAN (NAMA CABANG)
-        // sb.AppendLine("Select PRS_NamaCabang ")
-        // sb.AppendLine("  From tbMaster_perusahaan ")
-
-        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
-            ->select('prs_namacabang')
-            ->first()->prs_namacabang;
-
-        //! GET HEADER CETAKAN (NAMA TOKO)
-        // sb.AppendLine("Select TKO_NamaOMI ")
-        // sb.AppendLine("  From tbMaster_TokoIGR ")
-        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
-        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
-        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
-
-        $data['namaToko'] = DB::table('tbmaster_tokoigr')
-            ->select('tko_namaomi')
-            ->where([
-                'tko_kodeigr' => session('KODECABANG'),
-                'tko_kodeomi' => $kodeToko,
-            ])
-            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
-            ->first()->tko_namaomi;
-
-        //! INSERT INTO PBIDM_JALURKERTAS
-        //? f = "JALUR CETAK KERTAS"
-        DB::select("
-            INSERT INTO PBIDM_JALURKERTAS(
-                PBK_KODETOKO,
-                PBK_NOPB,
-                PBK_TGLPB,
-                PBK_NAMAGROUP,
-                PBK_KODERAK,
-                PBK_SUBRAK,
-                PBK_TIPERAK,
-                PBK_PLU,
-                PBK_NOURUT,
-                PBK_DESKRIPSI,
-                PBK_TAG,
-                PBK_QTY,
-                PBK_UNIT,
-                PBK_FRAC,
-                PBK_STOK,
-                PBK_CREATE_BY,
-                PBK_CREATE_DT
-            )
-            Select DISTINCT '" . $kodeToko . "' as KODETOKO,
-                '" . $noPB . "' as NoPB,
-                TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
-                GRR_GroupRak as NamaGroup,
-                PLUKARTON as PLU,
-                LKS_KodeRak as KodeRak,
-                LKS_KodeSubRak as Subrak,
-                LKS_TipeRak as TipeRak,
-                LKS_NoUrut as NoUrut,
-                DESK,
-                PRD_KodeTag,
-                QTYK as ORDER,
-                UNITKECIL,
-                FRACKECIL,
-                STOK,
-                '" . session('userid') . "',
-                CURRENT_DATE
-            From TEMP_JALURKERTAS_IDM, tbMaster_Prodmast
-            Where REQ_ID = '" . $ip . "'
-            And FDKCAB = '" . $kodeToko . "'
-            And FDNOUO = '" . $noPB . "'
-            And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
-            And PRD_PRDCD = PLUKARTON
-        ");
-
-        $data['data'] = DB::select("
-            Select GRR_GroupRak as NamaGroup,
-                PLUKARTON as PLU,
-                LKS_KodeRak as KodeRak,
-                LKS_KodeSubRak as Subrak,
-                LKS_TipeRak as TipeRak,
-                LKS_NoUrut as NoUrut,
-                DESK,
-                PRD_KodeTag,
-                QTYK as ORDER,
-                UNITKECIL ||' /'|| FRACKECIL as UNIT,
-                STOK
-            From TEMP_JALURKERTAS_IDM, tbMaster_Prodmast
-            Where REQ_ID = '" . $ip . "'
-                And FDKCAB = '" . $kodeToko . "'
-                And FDNOUO = '" . $noPB . "'
-                And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
-                And PRD_PRDCD = PLUKARTON
-            Order By coalesce(GRR_GROUPRAK,'0'),LKS_KodeRak,LKS_KodeSubRak,LKS_TipeRak,LKS_NoUrut
-        ");
-
-        return $data;
-    }
-
     public function prosesPBIDM($noPB,$kodeToko,$tglPB,$fullPathFile){
         DB::beginTransaction();
         try{
+
+            //! dummy
             // $noPB = 'TZ4Z133';
             // $kodeToko = 'TZ4Z';
             // $tglPB = '10-10-2023';
@@ -1061,7 +354,6 @@ class Controller extends BaseController
                     ->where(DB::raw("to_char(HDP_TGLPB,'YYYY')"), Carbon::parse($tglPB)->format('Y'))
                     ->count();
 
-            //! dummy
             if($check > 0){
                 $message = "PB Dengan No = $noPB, KodeTOKO = $kodeToko Sudah Pernah Diproses !";
                 throw new HttpResponseException(ApiFormatter::error(400, $message));
@@ -3340,9 +2632,6 @@ class Controller extends BaseController
                 ->whereRaw("tgldok = to_date('" . $tglPB . "','DD-MM-YYYY')")
                 ->count();
 
-            //! dummy
-            // $jumTolakan = 0;
-
             if((int)$jumItmCSV - (int)$jumTolakan <= 0){
 
                 $message = "Semua Item Ditolak !!, Silahkan Cek Di TBTR_TOLAKANPBOMI | TOKO : $kodeToko, NOPB : $noPB TGLPB : $tglPB";
@@ -3359,7 +2648,6 @@ class Controller extends BaseController
                 ->whereRaw("pbo_tglpb = to_date('". $tglPB . "','DD-MM-YYYY')")
                 ->count();
 
-            //! dummy
             if($count == 0){
                 $message = "Total Permintaan Semua Item Jumlahnya NOL (Silahkan Cek Di TBTR_TOLAKAN_PBOMI) | TOKO : $kodeToko, NOPB : $noPB TGLPB : $tglPB";
                 throw new HttpResponseException(ApiFormatter::error(400, $message));
@@ -3490,10 +2778,10 @@ class Controller extends BaseController
             return [
                 'cetak_all_1' => $this->CetakALL_1($kodeToko, $ip, $noPB, $tglPB, $PersenMargin),
                 'cetak_all_2' => $this->CetakALL_2($kodeToko, $ip, $noPB, $tglPB, $PersenMargin),
-                'cetak_all_3' => $this->CetakALL_3($kodeToko, $ip, $noPB, $tglPB),
+                'cetak_all_3' => $this->CetakALL_3($kodeToko, $ip, $noPB, $tglPB, $CounterKarton),
                 'cetak_all_4' => $this->CetakALL_4($kodeToko, $ip, $noPB, $tglPB),
-                'cetak_all_5' => $this->CetakALL_5($kodeToko, $ip, $noPB, $tglPB),
-                'cetak_all_6' => $this->CetakALL_6($kodeToko, $ip, $noPB, $tglPB),
+                'cetak_all_5' => $this->CetakALL_5($kodeToko, $ip, $noPB, $tglPB, $CounterKecil),
+                'cetak_all_6' => $this->CetakALL_6($kodeToko, $ip, $noPB, $tglPB, $CounterKecil),
             ];
 
         } catch (HttpResponseException $e) {
@@ -3507,5 +2795,799 @@ class Controller extends BaseController
             $message = "Oops terjadi kesalahan ( $e )";
             throw new HttpResponseException(ApiFormatter::error(400, $message));
         }
+    }
+
+    //! LIST ORDER PB
+    public function CetakAll_1($kodeToko,$ip,$noPB,$tglPB,$PersenMargin){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
+        //! GET HEADER CETAKAN (NAMA CABANG)
+        // sb.AppendLine("Select PRS_NamaCabang ")
+        // sb.AppendLine("  From tbMaster_perusahaan ")
+
+        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
+            ->select('prs_namacabang')
+            ->first()->prs_namacabang;
+
+        //! GET HEADER CETAKAN (NAMA TOKO)
+        // sb.AppendLine("Select TKO_NamaOMI ")
+        // sb.AppendLine("  From tbMaster_TokoIGR ")
+        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
+        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
+        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
+
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
+            ->where([
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
+            ])
+            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_namaomi;
+
+        //! CHECK DATA
+        // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
+        // sb.AppendLine("  From information_schema.columns ")
+        // sb.AppendLine(" Where UPPER(table_name) = 'TBMASTER_MARGINPLUIDM' ")
+
+        //! CETAK DATA 1
+        $check = DB::table('information_schema.columns')
+            ->whereRaw("UPPER(table_name) = 'TBMASTER_MARGINPLUIDM'")
+            ->count();
+
+        if($check > 0){
+
+            //! INSERT INTO PBIDM_LISTORDER
+            DB::select("
+                INSERT INTO PBIDM_LISTORDER
+                (
+                    PBL_KODETOKO,
+                    PBL_NOPB,
+                    PBL_TGLPB,
+                    PBL_PLU,
+                    PBL_DESKRIPSI,
+                    PBL_UNIT,
+                    PBL_FRAC,
+                    PBL_QTYB,
+                    PBL_QTYK,
+                    PBL_QTYO,
+                    PBL_HRGSATUAN,
+                    PBL_NILAI,
+                    PBL_PPN,
+                    PBL_TOTAL,
+                    PBL_CREATE_BY,
+                    PBL_CREATE_DT
+                )
+                Select '" . $kodeToko . "' as KODETOKO,
+                    '" . $noPB . "' as NoPB,
+                    TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
+                    plukarton as plu,
+                    desk,
+                    unitkarton as unit,
+                    frackarton as frac,
+                    qtyb as qty,
+                    qtyk as frc,
+                    fdqtyb as inpcs,
+                    Round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Harga,
+                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Nilai,
+                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
+                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTAL,
+                    '" . session('userid') . "',
+                    CURRENT_DATE
+                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_MarginPLUIDM
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+                    and MPI_PluIGR = PLUKARTON
+            ");
+
+            $data['data'] = DB::select("
+                Select plukarton as plu,
+                    desk,
+                    unitkarton ||'/'|| frackarton as unit,
+                    qtyb as qty,
+                    qtyk as frc,
+                    fdqtyb as inpcs,
+                    Round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Harga,
+                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) as Nilai,
+                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
+                    fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100))) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTAL
+                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_MarginPLUIDM
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+                    and MPI_PluIGR = PLUKARTON
+                Order By plukarton
+            ");
+        }else{
+            //! INSERT INTO PBIDM_LISTORDER
+            DB::select("
+                INSERT INTO PBIDM_REKAPORDER
+                (
+                    PBL_KODETOKO,
+                    PBL_NOPB,
+                    PBL_TGLPB,
+                    PBL_PLU,
+                    PBL_DESKRIPSI,
+                    PBL_UNIT,
+                    PBL_QTYB,
+                    PBL_QTYK,
+                    PBL_QTYO,
+                    PBL_HRGSATUAN,
+                    PBL_NILAI,
+                    PBL_PPN,
+                    PBL_TOTAL,
+                    PBL_CREATE_BY,
+                    PBL_CREATE_DT
+                )
+                Select '" . $kodeToko . "' as KODETOKO
+                    '" . $noPB . "' as NoPB,
+                    TO_DATE('" . $tglPB . "','YYYYMMDD') as TglPB,
+                    plukarton as plu,
+                    desk,
+                    unitkarton ||'/'|| frackarton as unit,
+                    qtyb as qty,
+                    qtyk as frc,
+                    fdqtyb as inpcs,
+                    Round(avgcost * (1+ " . $PersenMargin . ")) as Harga,
+                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) as Nilai,
+                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
+                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTAL,
+                    '" . session('userid') . "',
+                    CURRENT_DATE
+                From temp_pbidm_ready, tbMaster_prodmast
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+            ");
+
+            $data['data'] = DB::select("
+                Select plukarton as plu,
+                    desk,
+                    unitkarton ||'/'|| frackarton as unit,
+                    qtyb as qty
+                    qtyk as frc,
+                    fdqtyb as inpcs,
+                    Round(avgcost * (1+ " . $PersenMargin . ")) as Harga
+                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) as Nilai
+                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN
+                    fdqtyb * round(avgcost * (1+" . $PersenMargin . ")) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END) as TOTA
+                From temp_pbidm_ready, tbMaster_prodmas
+                Where req_id = '" . $ip . "
+                    and fdnouo = '" . $noPB . "
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarto
+                Order By plukarto
+            ");
+
+            //! dummy
+            // $data['data'] = DB::select("
+            //     Select plukarton as plu,
+            //         desk,
+            //         unitkarton ||'/'|| frackarton as unit,
+            //         qtyb as qty,
+            //         qtyk as frc,
+            //         fdqtyb as inpcs,
+            //         Round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END * (1+ " . $PersenMargin . ")) as Harga,
+            //         fdqtyb * round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END * (1+" . $PersenMargin . ")) as Nilai,
+            //         fdqtyb * round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END * (1+" . $PersenMargin . ")) * (COALESCE(PRD_PPN,0)/100) * CASE WHEN COALESCE(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END as PPN,
+            //         fdqtyb * round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END * (1+" . $PersenMargin . ")) * (1 + CASE WHEN COALESCE(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0)/100) ELSE 0 END) as TOTAL
+            //     From temp_pbidm_ready, tbMaster_prodmast
+            //     Where
+            //         prd_prdcd = plukarton
+            //     Order By plukarton, FDQTYB LIMIT 10
+            // ");
+        }
+
+        return $data;
+    }
+
+    //! REKAP ORDER PB
+    public function CetakAll_2($kodeToko,$ip,$noPB,$tglPB, $PersenMargin){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
+        //! GET HEADER CETAKAN (NAMA CABANG)
+        // sb.AppendLine("Select PRS_NamaCabang ")
+        // sb.AppendLine("  From tbMaster_perusahaan ")
+
+        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
+            ->select('prs_namacabang')
+            ->first()->prs_namacabang;
+
+        //! GET HEADER CETAKAN (NAMA TOKO)
+        // sb.AppendLine("Select TKO_NamaOMI ")
+        // sb.AppendLine("  From tbMaster_TokoIGR ")
+        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
+        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
+        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
+
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
+            ->where([
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
+            ])
+            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_namaomi;
+
+        //! CHECK DATA
+        // sb.AppendLine("Select coalesce(COUNT(1),0)  ")
+        // sb.AppendLine("  From information_schema.columns ")
+        // sb.AppendLine(" Where UPPER(table_name) = 'TBMASTER_MARGINPLUIDM' ")
+
+        //! CETAK DATA 1
+        $check = DB::table('information_schema.columns')
+            ->whereRaw("UPPER(table_name) = 'TBMASTER_MARGINPLUIDM'")
+            ->count();
+
+        if($check > 0){
+            //! INSERT INTO PBIDM_REKAPORDER
+            DB::select("
+                INSERT INTO PBIDM_REKAPORDER (
+                    PBR_KODETOKO,
+                    PBR_NOPB,
+                    PBR_TGLPB,
+                    PBR_NAMADIVISI,
+                    PBR_KODEDIVISI,
+                    PBL_ITEM,
+                    PBL_NILAI,
+                    PBL_PPN,
+                    PBL_SUBTOTAL,
+                    PBL_CREATE_BY,
+                    PBL_CREATE_DT
+                    )
+                Select '" . $kodeToko . "' as KODETOKO,
+                        '" . $noPB . "' as NoPB,
+                        TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
+                        DIV_NamaDivisi as NamaDivisi,
+                        PRD_KodeDivisi as KodeDivisi,
+                        Count(PLUKARTON) as Item,
+                        SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)))) as Nilai,
+                        SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
+                        SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL,
+                        '" . session('userid') . "',
+                        CURRENT_DATE
+                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi, tbMaster_MarginPLUIDM
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+                    and DIV_KodeDivisi = PRD_KodeDivisi
+                    and MPI_PluIGR = PLUKARTON
+                Group By DIV_NamaDivisi,
+                    PRD_KodeDivisi
+            ");
+
+            // ExecQRY(sb.ToString, "INSERT INTO PBIDM_REKAPORDER")
+            // '---- 24-03-2014
+
+            // sb = New StringBuilder
+            $data['data'] = DB::select("
+                Select DIV_NamaDivisi as NamaDivisi,
+                    PRD_KodeDivisi as KodeDivisi,
+                    Count(PLUKARTON) as Item,
+                    SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)))) as Nilai,
+                    SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
+                    SUM(fdqtyb * round(avgcost * (1+(coalesce(MPI_MARGIN,3)/100)) * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL
+                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi, tbMaster_MarginPLUIDM
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+                    and DIV_KodeDivisi = PRD_KodeDivisi
+                    and MPI_PluIGR = PLUKARTON
+                Group By DIV_NamaDivisi,
+                    PRD_KodeDivisi
+                Order By PRD_KodeDivisi
+            ");
+        }else{
+            //! INSERT INTO PBIDM_REKAPORDER
+            DB::select("
+                INSERT INTO PBIDM_REKAPORDER (
+                    PBR_KODETOKO,
+                    PBR_NOPB,
+                    PBR_TGLPB,
+                    PBR_NAMADIVISI,
+                    PBR_KODEDIVISI,
+                    PBL_ITEM,
+                    PBL_NILAI,
+                    PBL_PPN,
+                    PBL_SUBTOTAL,
+                    PBL_CREATE_BY,
+                    PBL_CREATE_DT
+                    )
+                Select '" . $kodeToko . "' as KODETOKO
+                    '" . $noPB . "' as NoPB,
+                    TO_DATE('" . $tglPB . "','YYYYMMDD') as TglPB,
+                    DIV_NamaDivisi as NamaDivisi,
+                    PRD_KodeDivisi as KodeDivisi,
+                    Count(PLUKARTON) as Item,
+                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . "))) as Nilai,
+                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
+                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL,
+                    '" . session('userid') . "',
+                    CURRENT_DATE
+                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+                    and DIV_KodeDivisi = PRD_KodeDivisi
+                Group By DIV_NamaDivisi,
+                    PRD_KodeDivisi
+            ");
+
+            $data['data'] = DB::select("
+                Select DIV_NamaDivisi as NamaDivisi,
+                    PRD_KodeDivisi as KodeDivisi,
+                    Count(PLUKARTON) as Item,
+                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . "))) as Nilai,
+                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (COALESCE(PRD_PPN,0) / 100) * CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
+                    SUM(fdqtyb * round(avgcost * (1+" . $PersenMargin . ") * (1 + CASE WHEN coalesce(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0) / 100) ELSE 0 END))) as SUBTOTAL
+                From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi
+                Where req_id = '" . $ip . "'
+                    and fdnouo = '" . $noPB . "'
+                    and fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                    and prd_prdcd = plukarton
+                    and DIV_KodeDivisi = PRD_KodeDivisi
+                Group By DIV_NamaDivisi,
+                        PRD_KodeDivisi
+                Order By PRD_KodeDivisi
+            ");
+        }
+
+        //! dummy
+        // $data['data'] = DB::select("
+        //     Select DIV_NamaDivisi as NamaDivisi,
+        //         PRD_KodeDivisi as KodeDivisi,
+        //         Count(PLUKARTON) as Item,
+        //         SUM(fdqtyb * round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END  * (1+" . $PersenMargin . "))) as Nilai,
+        //         SUM(fdqtyb * round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END  * (1+" . $PersenMargin . ") * (COALESCE(PRD_PPN,0)/100) * CASE WHEN COALESCE(PRD_FlagBKP1,'X') = 'Y' THEN 1 ELSE 0 END)) as PPN,
+        //         SUM(fdqtyb * round(avgcost / CASE WHEN PRD_UNIT='KG' THEN 1000 ELSE 1 END  * (1+" . $PersenMargin . ") * (1 + CASE WHEN COALESCE(PRD_FlagBKP1,'X') = 'Y' THEN (COALESCE(PRD_PPN,0)/100) ELSE 0 END))) as SUBTOTAL
+        //     From temp_pbidm_ready, tbMaster_prodmast, tbMaster_Divisi
+        //     Where prd_prdcd = plukarton
+        //         and DIV_KodeDivisi = PRD_KodeDivisi
+        //     Group By DIV_NamaDivisi,
+        //             PRD_KodeDivisi
+        //     Order By PRD_KodeDivisi LIMIT 10
+        // ");
+
+        return $data;
+    }
+
+    //! KARTON NON DPD
+    public function CetakAll_3($kodeToko,$ip,$noPB,$tglPB, $CounterKarton){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+        $data['batch'] = $CounterKarton;
+
+        //! GET HEADER CETAKAN (NAMA CABANG)
+        // sb.AppendLine("Select PRS_NamaCabang ")
+        // sb.AppendLine("  From tbMaster_perusahaan ")
+
+        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
+            ->select('prs_namacabang')
+            ->first()->prs_namacabang;
+
+        //! GET HEADER CETAKAN (NAMA TOKO)
+        // sb.AppendLine("Select TKO_NamaOMI ")
+        // sb.AppendLine("  From tbMaster_TokoIGR ")
+        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
+        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
+        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
+
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
+            ->where([
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
+            ])
+            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_namaomi;
+
+        //! INSERT INTO PBIDM_KARTONNONDPD
+        //? = "KARTON NON DPD"
+        DB::select("
+            INSERT INTO PBIDM_KARTONNONDPD
+            (
+                PBD_KODETOKO,
+                PBD_NOPB,
+                PBD_TGLPB,
+                PBD_NAMAGROUP,
+                PBD_KODERAK,
+                PBD_SUBRAK,
+                PBD_TIPERAK,
+                PBD_PLU,
+                PBD_NOURUT,
+                PBD_DESKRIPSI,
+                PBD_TAG,
+                PBD_QTY,
+                PBD_UNIT,
+                PBD_FRAC,
+                PBD_STOK,
+                PBD_CREATE_BY,
+                PBD_CREATE_DT
+            )
+            Select '" . $kodeToko . "' as KODETOKO,
+                '" . $noPB . "' as NoPB,
+                TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
+                GRR_GroupRak as NamaGroup,
+                LKS_KodeRak as KodeRak,
+                LKS_KodeSubRak as SubRak,
+                LKS_TipeRak as TipeRak,
+                PLUKARTON as PLU,
+                LKS_NoUrut as NoUrut,
+                Desk,
+                PRD_KodeTag as TAG,
+                QTYB as Order,
+                UNITKarton,
+                FracKarton,
+                Stok,
+                '" . session('userid') . "',
+                CURRENT_DATE
+            From temp_karton_nondpd_idm,tbMaster_Prodmast
+            Where REQ_ID = '" . $ip . "'
+            And FDKCAB = '" . $kodeToko . "'
+            And FDNOUO = '" . $noPB . "'
+            And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
+            And PRD_PRDCD = PLUKARTON
+        ");
+
+        $data['data'] = DB::select("
+            Select DISTINCT GRR_GroupRak as NamaGroup,
+                LKS_KodeRak as KodeRak,
+                LKS_KodeSubRak as SubRak,
+                LKS_TipeRak as TipeRak,
+                PLUKARTON as PLU,
+                LKS_NoUrut as NoUrut,
+                Desk,
+                PRD_KodeTag as TAG,
+                QTYB as Order,
+                UNITKarton ||'/'|| FracKarton as UNIT,
+                Stok
+            From temp_karton_nondpd_idm,tbMaster_Prodmast
+            Where REQ_ID = '" . $ip . "'
+                And FDKCAB = '" . $kodeToko . "'
+                And FDNOUO = '" . $noPB . "'
+                And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
+                And PRD_PRDCD = PLUKARTON
+            Order By LKS_KodeRak,LKS_KodeSubRak,LKS_TipeRak,LKS_NoUrut
+        ");
+
+        //! dummy
+        // $data['data'] = DB::select("
+        //     Select DISTINCT GRR_GroupRak as NamaGroup,
+        //         LKS_KodeRak as KodeRak,
+        //         LKS_KodeSubRak as SubRak,
+        //         LKS_TipeRak as TipeRak,
+        //         PLUKARTON as PLU,
+        //         LKS_NoUrut as NoUrut,
+        //         Desk,
+        //         PRD_KodeTag as TAG,
+        //         QTYB as Order,
+        //         UNITKarton ||'/'|| FracKarton as UNIT,
+        //             Stok
+        //     From temp_karton_nondpd_idm,tbMaster_Prodmast
+        //     Where PRD_PRDCD = PLUKARTON
+        //     Order By GRR_GroupRak,LKS_KodeRak,LKS_KodeSubRak,LKS_TipeRak,LKS_NoUrut LIMIT 10
+        // ");
+
+        return $data;
+    }
+
+    //! ITEM ORDER DITOLAK
+    public function CetakAll_4($kodeToko,$ip,$noPB,$tglPB){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+
+        //! GET HEADER CETAKAN (NAMA CABANG)
+        // sb.AppendLine("Select PRS_NamaCabang ")
+        // sb.AppendLine("  From tbMaster_perusahaan ")
+
+        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
+            ->select('prs_namacabang')
+            ->first()->prs_namacabang;
+
+        //! GET HEADER CETAKAN (NAMA TOKO)
+        // sb.AppendLine("Select TKO_NamaOMI ")
+        // sb.AppendLine("  From tbMaster_TokoIGR ")
+        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
+        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
+        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
+
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
+            ->where([
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
+            ])
+            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_namaomi;
+
+        //! ISI dtOrderDitolak
+        //? f = "ORDER DITOLAK"
+        $data['data'] = DB::select("
+            Select PLU as PLUIDM,
+                PLUIGR,
+                PRD_DeskripsiPanjang as DESK,
+                PRD_UNIT||'/'||PRD_Frac as UNIT,
+                QTYO as QTY,
+                KETA as Keterangan
+            From temp_cetakpb_tolakan_idm,tbMaster_Prodmast
+            Where REQ_ID = '" . $ip . "'
+                And KCAB = '" . $kodeToko . "'
+                And NODOK = '" . $noPB . "'
+                And TGLDOK = to_date('" . $tglPB . "','DD-MM-YYYY')
+                And PRD_PRDCD = PLUIGR
+                And KETA <> 'PLU TIDAK TERDAFTAR DI TBTEMP_PLUIDM'
+        ");
+
+        //! dummy
+        // $data['data'] = DB::select("
+        //     Select PLU as PLUIDM,
+        //         PLUIGR,
+        //         PRD_DeskripsiPanjang as DESK,
+        //         PRD_UNIT||'/'||PRD_Frac as UNIT,
+        //         QTYO as QTY,
+        //         KETA as Keterangan
+        //     From temp_cetakpb_tolakan_idm,tbMaster_Prodmast
+        //     Where PRD_PRDCD = PLUIGR
+        //         And KETA <> 'PLU TIDAK TERDAFTAR DI TBTEMP_PLUIDM' LIMIT 10
+        // ");
+
+        return $data;
+    }
+
+    //! POSISI RAK JALUR TIDAK KETEMU (PDF BELUM KETEMU)
+    public function CetakAll_5($kodeToko,$ip,$noPB,$tglPB, $CounterKecil){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+        $data['batch'] = $CounterKecil;
+
+        //! GET HEADER CETAKAN (NAMA CABANG)
+        // sb.AppendLine("Select PRS_NamaCabang ")
+        // sb.AppendLine("  From tbMaster_perusahaan ")
+
+        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
+            ->select('prs_namacabang')
+            ->first()->prs_namacabang;
+
+        //! GET HEADER CETAKAN (NAMA TOKO)
+        // sb.AppendLine("Select TKO_NamaOMI ")
+        // sb.AppendLine("  From tbMaster_TokoIGR ")
+        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
+        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
+        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
+
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
+            ->where([
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
+            ])
+            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_namaomi;
+
+        //! INSERT INTO PBIDM_RAKJALUR_TIDAKKETEMU
+        //? f = "RAK JALUR TIDAK KETEMU";
+        DB::select("
+            INSERT INTO PBIDM_RAKJALUR_TIDAKKETEMU
+            (
+                PBT_KODETOKO,
+                PBT_NOPB,
+                PBT_TGLPB,
+                PBT_PLU,
+                PBT_DESKRIPSI,
+                PBT_KODERAK,
+                PBT_SUBRAK,
+                PBT_TIPERAK,
+                PBT_SHELVINGRAK,
+                PBT_QTYB,
+                PBT_QTYK,
+                PBT_UNITKARTON,
+                PBT_FRACKARTON,
+                PBT_RECORDID,
+                PBT_CREATE_BY,
+                PBT_CREATE_DT
+            )
+            Select DISTINCT '" . $kodeToko . "' as KODETOKO,
+                '" . $noPB . "' as NoPB,
+                TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
+                NJI.PluKarton as PLU,
+                NJI.DESK,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeRak,'') END as KodeRak,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeSubrak,'') END as SubRak,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_TipeRak,'') END as TipeRak,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_ShelvingRak,'') END as ShelvingRak,
+                NJI.QTYB as OrderCTN,
+                NJI.QTYK as OrderPCS,
+                NJI.UnitKarton,
+                NJI.FracKarton,
+                coalesce(NJI.FDRCID,'X') as RECID,
+                '" . session('userid') . "',
+                CURRENT_DATE
+            From TEMP_NOJALUR_IDM NJI
+            join tbMaster_Lokasi on LKS_PRDCD = PLUKARTON
+            Where LKS_KodeIGR = '" . session('KODECABANG') . "'
+                And LKS_KodeRak Not Like 'D%'
+                And REQ_ID = '" . $ip . "'
+                And FDKCAB = '" . $kodeToko . "'
+                And fdnouo = '" . $noPB . "'
+                And fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                And LKS_TIPERAK NOT LIKE  'S%'
+                And Not EXISTS
+                (
+                    Select grr_grouprak
+                        from tbmaster_grouprak,tbmaster_lokasi lks2
+                    where grr_koderak = lks2.lks_koderak
+                        and grr_subrak = lks2.lks_kodesubrak
+                        and LKS_KodeRak Like 'D%'
+                        And LKS_TIPERAK NOT LIKE 'S%'
+                        and lks_prdcd = plukarton
+                )
+        ");
+
+        // sb = New StringBuilder
+        $data['data'] = DB::select("
+            Select DISTINCT NJI.PluKarton as PLU,
+                NJI.DESK,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeRak,'') END as KodeRak,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_KodeSubrak,'') END as SubRak,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_TipeRak,'') END as TipeRak,
+                CASE WHEN NJI.FDRCID = 'B' THEN '' ELSE coalesce(lks_ShelvingRak,'') END as ShelvingRak,
+                NJI.QTYB as OrderCTN,
+                NJI.QTYK as OrderPCS,
+                NJI.UnitKarton||'/'||NJI.FracKarton as UNIT,
+                coalesce(NJI.FDRCID,'X') as RECID
+            From TEMP_NOJALUR_IDM NJI, tbMaster_Lokasi
+            Where LKS_KodeIGR = '" . session('KODECABANG') . "'
+                And LKS_PRDCD = PLUKARTON
+                And LKS_KodeRak Not Like 'D%'
+                And REQ_ID = '" . $ip . "'
+                And FDKCAB = '" . $kodeToko . "'
+                And fdnouo = '" . $noPB . "'
+                And fdtgpb = to_date('" . $tglPB . "','DD-MM-YYYY')
+                And LKS_TIPERAK NOT LIKE  'S%'
+                And Not EXISTS(
+                    Select grr_grouprak
+                    from tbmaster_grouprak,tbmaster_lokasi lks2
+                    where grr_koderak = lks2.lks_koderak
+                    and grr_subrak = lks2.lks_kodesubrak
+                    and LKS_KodeRak Like 'D%'
+                    And LKS_TIPERAK NOT LIKE 'S%'
+                    and lks_prdcd = plukarton
+                )
+            Order By NJI.PLUKarton
+        ");
+
+        return $data;
+    }
+
+    //! JALUR CETAK KERTAS
+    public function CetakAll_6($kodeToko,$ip,$noPB,$tglPB, $CounterKecil){
+
+        $data['kodeToko'] = $kodeToko;
+        $data['tglPb'] = $tglPB;
+        $data['batch'] = $CounterKecil;
+
+        //! GET HEADER CETAKAN (NAMA CABANG)
+        // sb.AppendLine("Select PRS_NamaCabang ")
+        // sb.AppendLine("  From tbMaster_perusahaan ")
+
+        $data['namaCabang'] = DB::table('tbmaster_perusahaan')
+            ->select('prs_namacabang')
+            ->first()->prs_namacabang;
+
+        //! GET HEADER CETAKAN (NAMA TOKO)
+        // sb.AppendLine("Select TKO_NamaOMI ")
+        // sb.AppendLine("  From tbMaster_TokoIGR ")
+        // sb.AppendLine(" Where TKO_KodeIGR = '" & KDIGR & "' ")
+        // sb.AppendLine("   And TKO_KodeOMI = '" & KodeToko & "' ")
+        // sb.AppendLine("   And coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE ")
+
+        $data['namaToko'] = DB::table('tbmaster_tokoigr')
+            ->select('tko_namaomi')
+            ->where([
+                'tko_kodeigr' => session('KODECABANG'),
+                'tko_kodeomi' => $kodeToko,
+            ])
+            ->whereRaw("coalesce(TKO_TGLTUTUP,CURRENT_DATE+1) > CURRENT_DATE")
+            ->first()->tko_namaomi;
+
+        //! INSERT INTO PBIDM_JALURKERTAS
+        //? f = "JALUR CETAK KERTAS"
+        DB::select("
+            INSERT INTO PBIDM_JALURKERTAS(
+                PBK_KODETOKO,
+                PBK_NOPB,
+                PBK_TGLPB,
+                PBK_NAMAGROUP,
+                PBK_KODERAK,
+                PBK_SUBRAK,
+                PBK_TIPERAK,
+                PBK_PLU,
+                PBK_NOURUT,
+                PBK_DESKRIPSI,
+                PBK_TAG,
+                PBK_QTY,
+                PBK_UNIT,
+                PBK_FRAC,
+                PBK_STOK,
+                PBK_CREATE_BY,
+                PBK_CREATE_DT
+            )
+            Select DISTINCT '" . $kodeToko . "' as KODETOKO,
+                '" . $noPB . "' as NoPB,
+                TO_DATE('" . $tglPB . "','DD-MM-YYYY') as TglPB,
+                GRR_GroupRak as NamaGroup,
+                PLUKARTON as PLU,
+                LKS_KodeRak as KodeRak,
+                LKS_KodeSubRak as Subrak,
+                LKS_TipeRak as TipeRak,
+                LKS_NoUrut as NoUrut,
+                DESK,
+                PRD_KodeTag,
+                QTYK as ORDER,
+                UNITKECIL,
+                FRACKECIL,
+                STOK,
+                '" . session('userid') . "',
+                CURRENT_DATE
+            From TEMP_JALURKERTAS_IDM, tbMaster_Prodmast
+            Where REQ_ID = '" . $ip . "'
+            And FDKCAB = '" . $kodeToko . "'
+            And FDNOUO = '" . $noPB . "'
+            And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
+            And PRD_PRDCD = PLUKARTON
+        ");
+
+        $data['data'] = DB::select("
+            Select GRR_GroupRak as NamaGroup,
+                PLUKARTON as PLU,
+                LKS_KodeRak as KodeRak,
+                LKS_KodeSubRak as Subrak,
+                LKS_TipeRak as TipeRak,
+                LKS_NoUrut as NoUrut,
+                DESK,
+                PRD_KodeTag,
+                QTYK as ORDER,
+                UNITKECIL ||' /'|| FRACKECIL as UNIT,
+                STOK
+            From TEMP_JALURKERTAS_IDM, tbMaster_Prodmast
+            Where REQ_ID = '" . $ip . "'
+                And FDKCAB = '" . $kodeToko . "'
+                And FDNOUO = '" . $noPB . "'
+                And FDTGPB = to_date('" . $tglPB . "','DD-MM-YYYY')
+                And PRD_PRDCD = PLUKARTON
+            Order By coalesce(GRR_GROUPRAK,'0'),LKS_KodeRak,LKS_KodeSubRak,LKS_TipeRak,LKS_NoUrut
+        ");
+
+        //! dummy
+        // $data['data'] = DB::select("
+        //     Select GRR_GroupRak as namagroup,
+        //         PLUKARTON as plu,
+        //         LKS_KodeRak as koderak,
+        //         LKS_KodeSubRak as subrak,
+        //         LKS_TipeRak as tiperak,
+        //         LKS_NoUrut as nourut,
+        //         desk,
+        //         'kodetag' as prd_kodetag,
+        //         QTYK as ORDER,
+        //         UNITKECIL ||' /'|| FRACKECIL as UNIT,
+        //         STOK
+        //     From TEMP_JALURKERTAS_IDM LIMIT 10
+        // ");
+
+        return $data;
     }
 }

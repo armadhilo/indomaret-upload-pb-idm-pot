@@ -91,9 +91,7 @@ class UploadPotController extends Controller
                     $noPB = $record->docno;
                     $PasswordOK = False;
 
-                    //! dummy
-                    // $kodeigr = session('KODECABANG');
-                    $kodeigr = '22';
+                    $kodeigr = session('KODECABANG');
 
                     // sb.AppendLine("Select TKO_KodeCustomer ")
                     // sb.AppendLine("From tbMaster_tokoIGR ")
@@ -607,7 +605,7 @@ class UploadPotController extends Controller
         //! HANDLING HANYA BISA JAM 12 MALAM
         //* ERROR MESSAGE->Mohon Tunggu Sampai JAM 12 MALAM
 
-        $proses = $this->ProsesPBIDM($noPB,$KodeToko,$tglPB,'fullpath/'.$namaFile);
+        $proses = $this->ProsesPBIDM($noPB,$KodeToko,$tglPB,$namaFile);
 
         // Download Dummy PDF zip
         $pdfs = [];
@@ -651,7 +649,7 @@ class UploadPotController extends Controller
             ->update([
                 'cpp_flag' => '1'
             ]);
-        
+
         return ApiFormatter::success(200, "Proses PBIDM Berhasil..!", $zipFileName);
 
 

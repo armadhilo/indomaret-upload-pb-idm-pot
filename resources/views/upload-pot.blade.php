@@ -229,6 +229,7 @@
             $('#modal_login').modal("show");
             $('body').addClass('modal-blur');
             initializeDatatables();
+            showDatatablesHead();
         });
 
         function uploadPBA(){
